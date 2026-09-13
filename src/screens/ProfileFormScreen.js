@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,7 +18,7 @@ import { useAuth } from "../context/AuthContext";
 import cloudinaryConfig from "../cloudinaryConfig";
 
 const GENDERS = ["남성", "여성", "기타"];
-const SEEKING = ["남성", "여성"]; // ← 만나고 싶은 성별 선택지
+const SEEKING = ["남성", "여성"];
 const PHOTO_SLOTS = 3;
 
 export default function ProfileFormScreen({ mode = "setup", navigation }) {
@@ -28,7 +28,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const [name, setName] = useState(existing?.name || "");
   const [age, setAge] = useState(existing?.age ? String(existing.age) : "");
   const [gender, setGender] = useState(existing?.gender || "");
-  const [seekingGender, setSeekingGender] = useState(existing?.seekingGender || ""); // ← 추가
+  const [seekingGender, setSeekingGender] = useState(existing?.seekingGender || "");
   const [bio, setBio] = useState(existing?.bio || "");
   const [photos, setPhotos] = useState(
     existing?.photos?.length
@@ -36,11 +36,13 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       : Array(PHOTO_SLOTS).fill(null)
   );
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [okMsg, setOkMsg] = useState("");
 
   const pickPhoto = async (index) => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("권한 필요", "사진을 선택하려면 갤러리 접근 권한이 필요해요.");
+      setError("사진을 선택하려면 갤러리 접근 권한이 필요해요.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -66,16 +68,19 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     });
   };
 
+  // 사진 업로드 — 웹은 Blob, 폰은 파일객체로 (플랫폼 자동 분기)
   const uploadIfNeeded = async (uri, index) => {
     if (!uri) return null;
     if (uri.startsWith("http")) return uri;
 
     const formData = new FormData();
-    formData.append("file", {
-      uri,
-      type: "image/jpeg",
-      name: `photo_${index}.jpg`,
-    });
+
+    if (Platform.OS === "web") {
+      const blob = await (await fetch(uri)).blob();
+      formData.append("file", blob);
+    } else {
+      formData.append("file", { uri, type: "image/jpeg", name: `photo_${index}.jpg` });
+    }
     formData.append("upload_preset", cloudinaryConfig.uploadPreset);
 
     const res = await fetch(
@@ -89,38 +94,38 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     return data.secure_url;
   };
 
-  // ▼▼▼ 위치 받아오기 (권한 거부해도 저장은 계속 진행) ▼▼▼
+  // 위치 받기 (최대 6초, 못 받아도 저장은 계속 진행)
   const getMyLocation = async () => {
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
       if (perm.status !== "granted") return null;
-      const pos = await Location.getCurrentPositionAsync({});
+      const pos = await Promise.race([
+        Location.getCurrentPositionAsync({}),
+        new Promise((resolve) => setTimeout(() => resolve(null), 6000)),
+      ]);
+      if (!pos) return null;
       return { lat: pos.coords.latitude, lng: pos.coords.longitude };
     } catch (e) {
       return null;
     }
   };
-  // ▲▲▲
 
   const onSave = async () => {
+    setError("");
+    setOkMsg("");
     const ageNum = Number(age);
-    if (!name.trim() || !ageNum || !gender || !seekingGender) {
-      Alert.alert("입력 확인", "이름, 나이, 성별, 만나고 싶은 성별은 필수예요.");
-      return;
-    }
-    if (ageNum < 18) {
-      Alert.alert("가입 제한", "데이팅 앱은 만 18세 이상만 이용할 수 있어요.");
-      return;
-    }
+
+    if (!name.trim()) { setError("이름을 입력해주세요."); return; }
+    if (!ageNum) { setError("나이를 입력해주세요."); return; }
+    if (!gender) { setError("성별을 선택해주세요."); return; }
+    if (!seekingGender) { setError("만나고 싶은 성별을 선택해주세요."); return; }
+    if (ageNum < 18) { setError("만 18세 이상만 이용할 수 있어요."); return; }
     const chosenPhotos = photos.filter(Boolean);
-    if (chosenPhotos.length === 0) {
-      Alert.alert("입력 확인", "사진을 최소 1장 등록해주세요.");
-      return;
-    }
+    if (chosenPhotos.length === 0) { setError("사진을 최소 1장 등록해주세요."); return; }
 
     setSaving(true);
     try {
-      const location = await getMyLocation(); // ← 위치 받기
+      const location = await getMyLocation();
 
       const uploadedUrls = await Promise.all(
         photos.map((uri, idx) => uploadIfNeeded(uri, idx))
@@ -133,10 +138,10 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           name: name.trim(),
           age: ageNum,
           gender,
-          seekingGender, // ← 저장
+          seekingGender,
           bio: bio.trim(),
           photos: finalPhotos,
-          ...(location ? { location } : {}), // ← 위치 있으면 저장
+          ...(location ? { location } : {}),
           updatedAt: serverTimestamp(),
           ...(mode === "setup" ? { createdAt: serverTimestamp() } : {}),
         },
@@ -144,10 +149,10 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       );
 
       if (mode === "edit") {
-        Alert.alert("저장됨", "프로필이 업데이트됐어요.");
+        setOkMsg("프로필이 저장됐어요.");
       }
     } catch (e) {
-      Alert.alert("저장 실패", e?.message || "다시 시도해주세요.");
+      setError("저장 실패: " + (e?.message || "다시 시도해주세요."));
     } finally {
       setSaving(false);
     }
@@ -233,6 +238,9 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         maxLength={200}
       />
 
+      {!!error && <Text style={styles.error}>{error}</Text>}
+      {!!okMsg && <Text style={styles.ok}>{okMsg}</Text>}
+
       <TouchableOpacity style={styles.saveButton} onPress={onSave} disabled={saving}>
         {saving ? (
           <ActivityIndicator color="#fff" />
@@ -294,12 +302,14 @@ const styles = StyleSheet.create({
   genderChipActive: { backgroundColor: "#111111", borderColor: "#111111" },
   genderChipText: { color: "#555", fontWeight: "600" },
   genderChipTextActive: { color: "#fff" },
+  error: { color: "#d33", marginTop: 16, fontSize: 14, textAlign: "center" },
+  ok: { color: "#1a8f3c", marginTop: 16, fontSize: 14, textAlign: "center" },
   saveButton: {
     backgroundColor: "#111111",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
-    marginTop: 28,
+    marginTop: 20,
   },
   saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   logoutButton: { alignItems: "center", marginTop: 20 },

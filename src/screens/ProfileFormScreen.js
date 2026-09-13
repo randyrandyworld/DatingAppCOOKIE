@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -35,8 +36,8 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       : Array(PHOTO_SLOTS).fill(null)
   );
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");   // 빨간 경고
-  const [okMsg, setOkMsg] = useState("");    // 초록 알림
+  const [error, setError] = useState("");
+  const [okMsg, setOkMsg] = useState("");
 
   const pickPhoto = async (index) => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -67,16 +68,19 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     });
   };
 
+  // 사진 업로드 — 웹은 Blob, 폰은 파일객체로 (플랫폼 자동 분기)
   const uploadIfNeeded = async (uri, index) => {
     if (!uri) return null;
     if (uri.startsWith("http")) return uri;
 
     const formData = new FormData();
-    formData.append("file", {
-      uri,
-      type: "image/jpeg",
-      name: `photo_${index}.jpg`,
-    });
+
+    if (Platform.OS === "web") {
+      const blob = await (await fetch(uri)).blob();
+      formData.append("file", blob);
+    } else {
+      formData.append("file", { uri, type: "image/jpeg", name: `photo_${index}.jpg` });
+    }
     formData.append("upload_preset", cloudinaryConfig.uploadPreset);
 
     const res = await fetch(
@@ -90,7 +94,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     return data.secure_url;
   };
 
-  // 위치 받기 (최대 6초, 못 받아도 저장은 계속 진행 — 절대 안 멈춤)
+  // 위치 받기 (최대 6초, 못 받아도 저장은 계속 진행)
   const getMyLocation = async () => {
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
@@ -111,7 +115,6 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     setOkMsg("");
     const ageNum = Number(age);
 
-    // ▼ 필수값 하나씩 체크 → 빨간 글씨로 안내 (웹에서도 보임)
     if (!name.trim()) { setError("이름을 입력해주세요."); return; }
     if (!ageNum) { setError("나이를 입력해주세요."); return; }
     if (!gender) { setError("성별을 선택해주세요."); return; }
@@ -148,7 +151,6 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       if (mode === "edit") {
         setOkMsg("프로필이 저장됐어요.");
       }
-      // setup이면 저장되는 순간 AuthContext가 감지해서 메인으로 자동 이동
     } catch (e) {
       setError("저장 실패: " + (e?.message || "다시 시도해주세요."));
     } finally {
@@ -236,7 +238,6 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         maxLength={200}
       />
 
-      {/* ▼ 경고/알림 표시 ▼ */}
       {!!error && <Text style={styles.error}>{error}</Text>}
       {!!okMsg && <Text style={styles.ok}>{okMsg}</Text>}
 

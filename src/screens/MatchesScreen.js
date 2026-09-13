@@ -13,7 +13,6 @@ import {
   doc,
   getDoc,
   onSnapshot,
-  orderBy,
   query,
   where,
 } from "firebase/firestore";
@@ -26,10 +25,11 @@ export default function MatchesScreen({ navigation }) {
   const [matches, setMatches] = useState([]);
 
   useEffect(() => {
+    // orderBy를 Firestore 쿼리에 같이 넣으면 복합 색인(composite index)이 필요해서
+    // 색인이 없으면 onSnapshot이 조용히 실패해(매칭이 생겨도 목록엔 안 뜸) 클라이언트에서 정렬해요.
     const q = query(
       collection(db, "matches"),
-      where("users", "array-contains", user.uid),
-      orderBy("lastMessageAt", "desc")
+      where("users", "array-contains", user.uid)
     );
 
     const unsub = onSnapshot(
@@ -48,13 +48,18 @@ export default function MatchesScreen({ navigation }) {
                   ? { id: otherSnap.id, ...otherSnap.data() }
                   : { id: otherUid, name: "알 수 없음" },
                 lastMessage: data.lastMessage,
+                lastMessageAt: data.lastMessageAt?.toMillis?.() ?? 0,
               };
             })
         );
+        rows.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
         setMatches(rows);
         setLoading(false);
       },
-      () => setLoading(false)
+      (e) => {
+        console.error("매칭 목록 불러오기 실패:", e);
+        setLoading(false);
+      }
     );
 
     return unsub;

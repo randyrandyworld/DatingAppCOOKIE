@@ -189,15 +189,15 @@ export default function DiscoverScreen({ navigation }) {
           step={1}
           value={maxDist}
           onValueChange={setMaxDist}
-          minimumTrackTintColor="#FF4B6E"
+          minimumTrackTintColor="#111111"
           maximumTrackTintColor="#eee"
-          thumbTintColor="#FF4B6E"
+          thumbTintColor="#111111"
         />
       </View>
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#FF4B6E" />
+          <ActivityIndicator size="large" color="#111111" />
         </View>
       ) : !current ? (
         <View style={styles.center}>
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   emptySubtitle: { color: "#888", textAlign: "center" },
   refreshButton: {
     marginTop: 24,
-    backgroundColor: "#FF4B6E",
+    backgroundColor: "#111111",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   passButton: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#eee" },
-  likeButton: { backgroundColor: "#FF4B6E" },
+  likeButton: { backgroundColor: "#111111" },
   actionIcon: { fontSize: 26, color: "#555" },
   likeIcon: { color: "#fff" },
 });

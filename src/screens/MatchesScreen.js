@@ -63,7 +63,7 @@ export default function MatchesScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF4B6E" />
+        <ActivityIndicator size="large" color="#111111" />
       </View>
     );
   }

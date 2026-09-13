@@ -12,7 +12,7 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#FF4B6E",
+        tabBarActiveTintColor: "#111111",
         tabBarInactiveTintColor: "#aaa",
       }}
     >

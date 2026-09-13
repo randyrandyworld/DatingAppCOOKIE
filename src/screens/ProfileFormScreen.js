@@ -11,12 +11,14 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import cloudinaryConfig from "../cloudinaryConfig";
 
 const GENDERS = ["남성", "여성", "기타"];
+const SEEKING = ["남성", "여성"]; // ← 만나고 싶은 성별 선택지
 const PHOTO_SLOTS = 3;
 
 export default function ProfileFormScreen({ mode = "setup", navigation }) {
@@ -26,6 +28,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const [name, setName] = useState(existing?.name || "");
   const [age, setAge] = useState(existing?.age ? String(existing.age) : "");
   const [gender, setGender] = useState(existing?.gender || "");
+  const [seekingGender, setSeekingGender] = useState(existing?.seekingGender || ""); // ← 추가
   const [bio, setBio] = useState(existing?.bio || "");
   const [photos, setPhotos] = useState(
     existing?.photos?.length
@@ -65,7 +68,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
 
   const uploadIfNeeded = async (uri, index) => {
     if (!uri) return null;
-    if (uri.startsWith("http")) return uri; // 이미 업로드된 사진은 그대로 재사용
+    if (uri.startsWith("http")) return uri;
 
     const formData = new FormData();
     formData.append("file", {
@@ -86,10 +89,23 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     return data.secure_url;
   };
 
+  // ▼▼▼ 위치 받아오기 (권한 거부해도 저장은 계속 진행) ▼▼▼
+  const getMyLocation = async () => {
+    try {
+      const perm = await Location.requestForegroundPermissionsAsync();
+      if (perm.status !== "granted") return null;
+      const pos = await Location.getCurrentPositionAsync({});
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch (e) {
+      return null;
+    }
+  };
+  // ▲▲▲
+
   const onSave = async () => {
     const ageNum = Number(age);
-    if (!name.trim() || !ageNum || !gender) {
-      Alert.alert("입력 확인", "이름, 나이, 성별은 필수예요.");
+    if (!name.trim() || !ageNum || !gender || !seekingGender) {
+      Alert.alert("입력 확인", "이름, 나이, 성별, 만나고 싶은 성별은 필수예요.");
       return;
     }
     if (ageNum < 18) {
@@ -104,6 +120,8 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
 
     setSaving(true);
     try {
+      const location = await getMyLocation(); // ← 위치 받기
+
       const uploadedUrls = await Promise.all(
         photos.map((uri, idx) => uploadIfNeeded(uri, idx))
       );
@@ -115,8 +133,10 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           name: name.trim(),
           age: ageNum,
           gender,
+          seekingGender, // ← 저장
           bio: bio.trim(),
           photos: finalPhotos,
+          ...(location ? { location } : {}), // ← 위치 있으면 저장
           updatedAt: serverTimestamp(),
           ...(mode === "setup" ? { createdAt: serverTimestamp() } : {}),
         },
@@ -126,8 +146,6 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       if (mode === "edit") {
         Alert.alert("저장됨", "프로필이 업데이트됐어요.");
       }
-      // mode === "setup"이면 AuthContext가 profile 문서를 감지해서
-      // 자동으로 메인 화면으로 전환됨
     } catch (e) {
       Alert.alert("저장 실패", e?.message || "다시 시도해주세요.");
     } finally {
@@ -175,7 +193,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         keyboardType="number-pad"
       />
 
-      <Text style={styles.label}>성별</Text>
+      <Text style={styles.label}>내 성별</Text>
       <View style={styles.genderRow}>
         {GENDERS.map((g) => (
           <TouchableOpacity
@@ -184,6 +202,21 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
             onPress={() => setGender(g)}
           >
             <Text style={[styles.genderChipText, gender === g && styles.genderChipTextActive]}>
+              {g}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <Text style={styles.label}>만나고 싶은 성별</Text>
+      <View style={styles.genderRow}>
+        {SEEKING.map((g) => (
+          <TouchableOpacity
+            key={g}
+            style={[styles.genderChip, seekingGender === g && styles.genderChipActive]}
+            onPress={() => setSeekingGender(g)}
+          >
+            <Text style={[styles.genderChipText, seekingGender === g && styles.genderChipTextActive]}>
               {g}
             </Text>
           </TouchableOpacity>
@@ -258,11 +291,11 @@ const styles = StyleSheet.create({
     borderColor: "#e5e5e5",
     backgroundColor: "#fafafa",
   },
-  genderChipActive: { backgroundColor: "#FF4B6E", borderColor: "#FF4B6E" },
+  genderChipActive: { backgroundColor: "#111111", borderColor: "#111111" },
   genderChipText: { color: "#555", fontWeight: "600" },
   genderChipTextActive: { color: "#fff" },
   saveButton: {
-    backgroundColor: "#FF4B6E",
+    backgroundColor: "#111111",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",

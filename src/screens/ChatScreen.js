@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   bubbleRowMine: { justifyContent: "flex-end" },
   bubbleRowTheirs: { justifyContent: "flex-start" },
   bubble: { maxWidth: "78%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
-  bubbleMine: { backgroundColor: "#FF4B6E", borderBottomRightRadius: 4 },
+  bubbleMine: { backgroundColor: "#111111", borderBottomRightRadius: 4 },
   bubbleTheirs: { backgroundColor: "#f0f0f0", borderBottomLeftRadius: 4 },
   bubbleTextMine: { color: "#fff" },
   bubbleTextTheirs: { color: "#222" },
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fafafa",
   },
   sendButton: {
-    backgroundColor: "#FF4B6E",
+    backgroundColor: "#111111",
     borderRadius: 20,
     paddingHorizontal: 18,
     paddingVertical: 12,

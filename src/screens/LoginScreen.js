@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 36,
     fontWeight: "800",
-    color: "#FF4B6E",
+    color: "#111111",
     textAlign: "center",
     marginBottom: 6,
   },
@@ -119,12 +119,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#fafafa",
   },
   button: {
-    backgroundColor: "#FF4B6E",
+    backgroundColor: "#111111",
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: "center",
     marginTop: 8,
   },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  link: { color: "#FF4B6E", textAlign: "center", marginTop: 20 },
+  link: { color: "#111111", textAlign: "center", marginTop: 20 },
 });

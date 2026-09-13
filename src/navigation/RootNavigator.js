@@ -34,7 +34,7 @@ export default function RootNavigator() {
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color="#FF4B6E" />
+        <ActivityIndicator size="large" color="#111111" />
       </View>
     );
   }

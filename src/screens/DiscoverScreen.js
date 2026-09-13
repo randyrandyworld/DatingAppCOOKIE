@@ -11,19 +11,22 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import Slider from "@react-native-community/slider";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { recordSwipeAndCheckMatch } from "../utils/matching";
 import { getBlockedIds, showReportBlockMenu } from "../utils/blocking";
+import { distanceKm } from "../utils/distance";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = width * 0.28;
 
 export default function DiscoverScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [candidates, setCandidates] = useState([]);
+  const [rawList, setRawList] = useState([]); // 필터 전 원본
+  const [maxDist, setMaxDist] = useState(50); // 거리 설정 (기본 50km)
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
 
@@ -36,23 +39,23 @@ export default function DiscoverScreen({ navigation }) {
   const loadCandidates = async () => {
     setLoading(true);
     try {
-      // 이미 스와이프한 상대 목록 + 내가 차단한 상대 목록
       const [swipedSnap, blockedIds] = await Promise.all([
         getDocs(collection(db, "swipes", user.uid, "actions")),
         getBlockedIds(user.uid),
       ]);
       const swipedIds = new Set(swipedSnap.docs.map((d) => d.id));
 
-      // 전체 유저 (MVP 단계라 별도 필터 없이 전체 조회 후 클라이언트에서 제외)
       const usersSnap = await getDocs(collection(db, "users"));
       const list = usersSnap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
         .filter(
           (u) =>
             u.id !== user.uid && !swipedIds.has(u.id) && !blockedIds.has(u.id)
-        );
+        )
+        // ▼ 만나고 싶은 성별 필터 (내 seekingGender와 상대 gender가 같은 사람만)
+        .filter((u) => !profile?.seekingGender || u.gender === profile.seekingGender);
 
-      setCandidates(list);
+      setRawList(list);
       setIndex(0);
     } catch (e) {
       Alert.alert("불러오기 실패", e?.message || "다시 시도해주세요.");
@@ -60,6 +63,27 @@ export default function DiscoverScreen({ navigation }) {
       setLoading(false);
     }
   };
+
+  // ▼ 거리 필터 + 각 카드에 거리(_distance) 붙이기
+  const candidates = useMemo(() => {
+    const myLoc = profile?.location;
+    return rawList
+      .map((u) => {
+        let d = null;
+        if (myLoc && u.location) {
+          d = distanceKm(myLoc.lat, myLoc.lng, u.location.lat, u.location.lng);
+        }
+        return { ...u, _distance: d };
+      })
+      // 거리를 모르면(둘 중 하나라도 위치 없음) 일단 보여주고,
+      // 알면 설정한 maxDist 이내만 보여줌
+      .filter((u) => u._distance == null || u._distance <= maxDist);
+  }, [rawList, maxDist, profile?.location]);
+
+  // 거리 슬라이더 움직이면 카드 처음부터 다시
+  useEffect(() => {
+    setIndex(0);
+  }, [maxDist]);
 
   const panResponder = useMemo(
     () =>
@@ -108,7 +132,12 @@ export default function DiscoverScreen({ navigation }) {
     const liked = direction === "right";
     setBusy(true);
     try {
-      const matchId = await recordSwipeAndCheckMatch(user.uid, target.id, liked);
+      const matchId = await recordSwipeAndCheckMatch(
+        user.uid,
+        target.id,
+        liked,
+        profile?.name
+      );
       if (matchId) {
         Alert.alert("매칭 성공! 🎉", `${target.name}님과 매칭됐어요!`, [
           { text: "나중에", style: "cancel" },
@@ -120,7 +149,7 @@ export default function DiscoverScreen({ navigation }) {
         ]);
       }
     } catch (e) {
-      // 조용히 무시 — 다음 카드로 진행
+      // 조용히 무시
     } finally {
       setBusy(false);
     }
@@ -145,71 +174,83 @@ export default function DiscoverScreen({ navigation }) {
     outputRange: ["-10deg", "0deg", "10deg"],
   });
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FF4B6E" />
-      </View>
-    );
-  }
-
   const current = candidates[index];
   const next = candidates[index + 1];
 
-  if (!current) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyTitle}>오늘 보여줄 카드를 다 봤어요</Text>
-        <Text style={styles.emptySubtitle}>잠시 후 다시 확인해보세요</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={loadCandidates}>
-          <Text style={styles.refreshButtonText}>새로고침</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <View style={styles.deck}>
-        {next && (
-          <View style={[styles.card, styles.cardBehind]}>
-            <ProfileCard person={next} />
-          </View>
-        )}
-        <Animated.View
-          {...panResponder.panHandlers}
-          style={[
-            styles.card,
-            {
-              transform: [
-                { translateX: position.x },
-                { translateY: position.y },
-                { rotate },
-              ],
-            },
-          ]}
-        >
-          <ProfileCard person={current} />
-          <TouchableOpacity style={styles.moreButton} onPress={handleReportBlock}>
-            <Text style={styles.moreButtonText}>⋯</Text>
-          </TouchableOpacity>
-        </Animated.View>
+      {/* 거리 설정 슬라이더 */}
+      <View style={styles.filterBar}>
+        <Text style={styles.filterLabel}>거리 {maxDist}km 이내</Text>
+        <Slider
+          style={{ width: "100%", height: 40 }}
+          minimumValue={1}
+          maximumValue={100}
+          step={1}
+          value={maxDist}
+          onValueChange={setMaxDist}
+          minimumTrackTintColor="#FF4B6E"
+          maximumTrackTintColor="#eee"
+          thumbTintColor="#FF4B6E"
+        />
       </View>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.passButton]}
-          onPress={() => forceSwipe("left")}
-        >
-          <Text style={styles.actionIcon}>✕</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.likeButton]}
-          onPress={() => forceSwipe("right")}
-        >
-          <Text style={[styles.actionIcon, styles.likeIcon]}>♥</Text>
-        </TouchableOpacity>
-      </View>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#FF4B6E" />
+        </View>
+      ) : !current ? (
+        <View style={styles.center}>
+          <Text style={styles.emptyTitle}>보여줄 카드가 없어요</Text>
+          <Text style={styles.emptySubtitle}>거리를 넓히거나 잠시 후 다시 확인해보세요</Text>
+          <TouchableOpacity style={styles.refreshButton} onPress={loadCandidates}>
+            <Text style={styles.refreshButtonText}>새로고침</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <View style={styles.deck}>
+            {next && (
+              <View style={[styles.card, styles.cardBehind]}>
+                <ProfileCard person={next} />
+              </View>
+            )}
+            <Animated.View
+              {...panResponder.panHandlers}
+              style={[
+                styles.card,
+                {
+                  transform: [
+                    { translateX: position.x },
+                    { translateY: position.y },
+                    { rotate },
+                  ],
+                },
+              ]}
+            >
+              <ProfileCard person={current} />
+              <TouchableOpacity style={styles.moreButton} onPress={handleReportBlock}>
+                <Text style={styles.moreButtonText}>⋯</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.passButton]}
+              onPress={() => forceSwipe("left")}
+            >
+              <Text style={styles.actionIcon}>✕</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.likeButton]}
+              onPress={() => forceSwipe("right")}
+            >
+              <Text style={[styles.actionIcon, styles.likeIcon]}>♥</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -226,6 +267,9 @@ function ProfileCard({ person }) {
         <Text style={styles.name}>
           {person.name}, {person.age}
         </Text>
+        {person._distance != null && (
+          <Text style={styles.distance}>📍 {person._distance.toFixed(1)}km 거리</Text>
+        )}
         {!!person.bio && <Text style={styles.bio}>{person.bio}</Text>}
       </View>
     </>
@@ -234,6 +278,14 @@ function ProfileCard({ person }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
+  filterBar: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  filterLabel: { fontWeight: "700", fontSize: 14, color: "#333" },
   center: {
     flex: 1,
     alignItems: "center",
@@ -241,7 +293,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   emptyTitle: { fontSize: 18, fontWeight: "700", marginBottom: 6 },
-  emptySubtitle: { color: "#888" },
+  emptySubtitle: { color: "#888", textAlign: "center" },
   refreshButton: {
     marginTop: 24,
     backgroundColor: "#FF4B6E",
@@ -287,6 +339,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.35)",
   },
   name: { color: "#fff", fontSize: 22, fontWeight: "800" },
+  distance: { color: "#fff", marginTop: 2, fontSize: 13, fontWeight: "600" },
   bio: { color: "#fff", marginTop: 4, fontSize: 14 },
   actions: {
     flexDirection: "row",

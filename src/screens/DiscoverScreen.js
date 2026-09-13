@@ -21,7 +21,7 @@ const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = width * 0.28;
 
 export default function DiscoverScreen({ navigation }) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState([]);
   const [index, setIndex] = useState(0);
@@ -108,7 +108,12 @@ export default function DiscoverScreen({ navigation }) {
     const liked = direction === "right";
     setBusy(true);
     try {
-      const matchId = await recordSwipeAndCheckMatch(user.uid, target.id, liked);
+      const matchId = await recordSwipeAndCheckMatch(
+        user.uid,
+        target.id,
+        liked,
+        profile?.name
+      );
       if (matchId) {
         Alert.alert("매칭 성공! 🎉", `${target.name}님과 매칭됐어요!`, [
           { text: "나중에", style: "cancel" },

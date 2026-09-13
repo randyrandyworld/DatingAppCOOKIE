@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -7,6 +7,10 @@ import {
 } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import {
+  registerForPushNotificationsAsync,
+  savePushTokenForUser,
+} from "../utils/notifications";
 
 const AuthContext = createContext(null);
 
@@ -44,6 +48,19 @@ export function AuthProvider({ children }) {
     );
     return unsub;
   }, [user]);
+
+  // 로그인 + 프로필 작성이 끝난 유저에 한해, 이 기기의 푸시 토큰을 발급받아 저장
+  // (동일 로그인 세션에서 프로필이 갱신될 때마다 중복 등록하지 않도록 uid당 한 번만 실행)
+  const registeredTokenUidRef = useRef(null);
+  useEffect(() => {
+    if (!user || !profile) return;
+    if (registeredTokenUidRef.current === user.uid) return;
+    registeredTokenUidRef.current = user.uid;
+
+    registerForPushNotificationsAsync().then((token) => {
+      if (token) savePushTokenForUser(user.uid, token);
+    });
+  }, [user, profile]);
 
   const signup = (email, password) =>
     createUserWithEmailAndPassword(auth, email.trim(), password);

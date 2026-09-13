@@ -22,10 +22,11 @@ import {
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { showReportBlockMenu } from "../utils/blocking";
+import { sendPushNotificationToUser } from "../utils/notifications";
 
 export default function ChatScreen({ route, navigation }) {
   const { matchId, otherUser } = route.params;
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const listRef = useRef(null);
@@ -73,6 +74,14 @@ export default function ChatScreen({ route, navigation }) {
       lastMessage: trimmed,
       lastMessageAt: serverTimestamp(),
     });
+
+    if (otherUser?.id) {
+      sendPushNotificationToUser(otherUser.id, {
+        title: profile?.name || "새 메시지",
+        body: trimmed,
+        data: { type: "message", matchId, otherUser: { id: user.uid, name: profile?.name } },
+      });
+    }
   };
 
   return (

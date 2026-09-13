@@ -2,7 +2,7 @@
 
 React Native(Expo) + Firebase로 만든 미니멀 데이팅 앱입니다. 사진 인증 없이 이메일 가입만으로 바로 시작할 수 있어요.
 
-기능: 이메일 가입/로그인 · 프로필(사진·이름·나이·성별·소개) · 스와이프 매칭 · 실시간 채팅. 그 외 위치 필터, 푸시 알림, 결제 같은 기능은 의도적으로 뺐습니다.
+기능: 이메일 가입/로그인 · 프로필(사진·이름·나이·성별·소개) · 스와이프 매칭 · 실시간 채팅 · 매칭/메시지 푸시 알림. 그 외 위치 필터, 결제 같은 기능은 의도적으로 뺐습니다.
 
 ---
 
@@ -67,7 +67,43 @@ service cloud.firestore {
 4. Signing Mode를 **Unsigned** 로 변경 → Save (자동 생성된 preset 이름을 복사)
 5. `src/cloudinaryConfig.js` 파일을 열어 `cloudName`과 `uploadPreset` 값을 방금 복사한 값으로 채우기
 
-## 5. 로컬에서 실행하기
+## 5. 푸시 알림 (매칭/메시지)
+
+새 매칭이 생기거나 메시지가 오면 상대 기기로 푸시 알림이 갑니다. 별도 서버 없이, 앱이 [Expo 푸시 서비스](https://docs.expo.dev/push-notifications/overview/)를 직접 호출하는 방식이에요.
+
+> ⚠️ **중요**: Expo SDK 53부터 Expo Go 앱에서는 원격(remote) 푸시 알림이 더 이상 동작하지 않아요(Google 정책 변경 때문). 즉, **Expo Go로는 푸시 알림을 테스트할 수 없고**, 아래처럼 "개발 빌드(dev client)"를 한 번 만들어야 테스트가 가능합니다. 다른 기능(로그인, 매칭, 채팅 등)은 지금처럼 Expo Go로 계속 테스트해도 됩니다.
+
+### 5-1. 개발 빌드 만들기 (최초 1회, 기기당)
+
+```bash
+npx expo install expo-dev-client
+npx eas login          # Expo 계정 없으면 https://expo.dev 에서 무료 가입
+npx eas build:configure
+npx eas build --profile development --platform android   # 또는 ios
+```
+
+빌드가 끝나면 다운로드 링크(또는 QR)가 나와요. 그 앱을 폰에 설치하면 그게 "나만의 Expo Go"가 되고, 이후로는 평소처럼 `npx expo start`로 개발하면 됩니다.
+
+### 5-2. Android용 FCM 인증키 등록 (Android만 해당)
+
+1. Firebase 콘솔 → 프로젝트 설정 ⚙️ → **클라우드 메시징** 탭 → "Firebase Cloud Messaging API (V1)"이 사용 설정되어 있는지 확인
+2. 같은 화면에서 **서비스 계정** → "새 비공개 키 생성" → JSON 파일 다운로드
+3. `npx eas credentials` 실행 → Android 선택 → "Push Notifications: Manage your FCM V1 credentials" → 방금 받은 JSON 업로드
+
+(iOS는 EAS가 Apple 개발자 계정 로그인만으로 자동으로 처리해줘서 별도 키 등록이 필요 없어요.)
+
+### 5-3. 동작 확인
+
+1. 개발 빌드 앱을 폰에서 실행 → 로그인 → 알림 권한 허용 팝업이 뜨면 허용
+2. 친구 계정으로도 로그인해서 서로 좋아요를 눌러 매칭시키거나, 채팅에서 메시지를 보내보면 상대 폰에 알림이 도착합니다
+3. 알림을 탭하면 해당 채팅방으로 바로 이동해요
+
+### 참고
+- 시뮬레이터/에뮬레이터에서는 푸시 토큰이 발급되지 않아요 (실기기 필요)
+- 상대가 알림 권한을 거부했거나 토큰이 아직 없으면, 알림 전송은 조용히 건너뛰고 매칭/채팅 자체는 정상 동작해요
+- 토큰은 `users/{uid}` 문서의 `expoPushToken` 필드에 저장돼요
+
+## 6. 로컬에서 실행하기
 
 터미널(맥은 "터미널" 앱)을 열고:
 
@@ -81,44 +117,47 @@ npx expo start
 
 친구도 같은 방식으로 자기 폰에서 Expo Go로 접속하면, 서로 다른 계정으로 가입해서 실제 매칭·채팅을 테스트할 수 있어요.
 
-## 6. 코드 구조
+## 7. 코드 구조
 
 ```
-App.js                      앱 진입점, 네비게이션/컨텍스트 연결
-src/firebaseConfig.js       ← 여기만 채우면 됨 (Firebase 키)
-src/cloudinaryConfig.js     ← 여기만 채우면 됨 (Cloudinary 키)
-src/firebase.js             Firebase 초기화 (auth/db)
-src/context/AuthContext.js  로그인 상태 + 프로필 존재 여부 관리
-src/utils/matching.js       스와이프 기록 + 매칭 성사 로직
-src/navigation/             화면 이동 구조 (인증 → 프로필설정 → 메인탭)
+App.js                        앱 진입점, 네비게이션/컨텍스트 연결
+src/firebaseConfig.js         ← 여기만 채우면 됨 (Firebase 키)
+src/cloudinaryConfig.js       ← 여기만 채우면 됨 (Cloudinary 키)
+src/firebase.js               Firebase 초기화 (auth/db)
+src/context/AuthContext.js    로그인 상태 + 프로필 존재 여부 관리 + 푸시 토큰 등록
+src/utils/matching.js         스와이프 기록 + 매칭 성사 로직 + 매칭 알림 전송
+src/utils/notifications.js    푸시 토큰 발급/저장 + Expo 푸시 API 호출
+src/navigation/                화면 이동 구조 (인증 → 프로필설정 → 메인탭)
+  RootNavigator.js             인증 분기 + 알림 탭 시 채팅방으로 이동
+  navigationRef.js             네비게이션 밖(알림 핸들러)에서 화면 이동용 전역 ref
+  MainTabs.js                  하단 탭 (홈/매칭/마이)
 src/screens/
-  LoginScreen.js            로그인
-  SignupScreen.js           회원가입
-  ProfileFormScreen.js      프로필 작성/수정 (setup·edit 겸용, 사진 인증 없음)
-  DiscoverScreen.js         스와이프 카드 (좌우 드래그 또는 버튼)
-  MatchesScreen.js          매칭 목록
-  ChatScreen.js             1:1 실시간 채팅
-src/utils/blocking.js       신고/차단 로직 + 공용 액션시트 UI
+  LoginScreen.js               로그인
+  SignupScreen.js               회원가입
+  ProfileFormScreen.js          프로필 작성/수정 (setup·edit 겸용, 사진 인증 없음)
+  DiscoverScreen.js              스와이프 카드 (좌우 드래그 또는 버튼)
+  MatchesScreen.js                매칭 목록
+  ChatScreen.js                   1:1 실시간 채팅 + 메시지 알림 전송
+src/utils/blocking.js         신고/차단 로직 + 공용 액션시트 UI
 ```
 
 Firestore 데이터 구조:
-- `users/{uid}`: 프로필 정보
+- `users/{uid}`: 프로필 정보 (`expoPushToken` 필드에 이 유저 기기의 푸시 토큰 저장)
 - `swipes/{uid}/actions/{targetUid}`: 내가 누른 좋아요/패스 기록
 - `matches/{matchId}`: 매칭 정보 (matchId = 두 uid를 정렬해 합친 값), `blockedBy` 배열에 차단한 쪽 uid가 들어가면 양쪽 매칭 목록에서 숨겨짐
 - `matches/{matchId}/messages/{messageId}`: 채팅 메시지
 - `blocks/{uid}/blocked/{targetUid}`: 내가 차단한 상대 목록
 - `reports/{reportId}`: 신고 기록 (reporterId, targetId, reason) — 앱에서 직접 볼 수는 없고, Firebase 콘솔의 Firestore Database 화면에서 확인 가능
 
-## 7. 알려진 제한 (의도적으로 뺀 것들)
+## 8. 알려진 제한 (의도적으로 뺀 것들)
 
 - 위치 기반 필터 없음 — 가입한 모든 유저가 서로에게 노출됩니다
-- 푸시 알림 없음 — 앱을 열어야 새 메시지/매칭을 확인할 수 있어요
 - 사진 인증 없음 — 의도된 차별화 포인트입니다
 - 신고 내용을 관리자가 볼 수 있는 화면 없음 — Firebase 콘솔에서 `reports` 컬렉션을 직접 확인해야 해요
 - 매칭 목록 쿼리에 Firestore 복합 색인이 필요할 수 있어요. 앱 실행 중 콘솔에 "색인을 만들어야 합니다" 같은 에러와 링크가 뜨면, 그 링크를 클릭해서 자동 생성하면 됩니다 (1~2분 소요)
+- 푸시 알림은 Expo Go에서 테스트 불가 — 5번 항목대로 개발 빌드가 필요해요
 
-## 8. 다음에 추가하면 좋은 것 (선택)
+## 9. 다음에 추가하면 좋은 것 (선택)
 
 - 위치 반경 필터 (Firestore GeoPoint + 클라이언트 거리 계산)
-- 푸시 알림 (Expo Notifications + Firebase Cloud Messaging)
-- 앱스토어/플레이스토어 정식 배포 (`eas build`)
+- 앱스토어/플레이스토어 정식 배포 (`eas build` — 5-1에서 만든 개발 빌드 설정을 그대로 프로덕션 빌드에도 재사용 가능)

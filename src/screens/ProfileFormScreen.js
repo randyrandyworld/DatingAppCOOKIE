@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
+import { File, UploadTask, UploadType } from "expo-file-system";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
@@ -68,26 +69,52 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     });
   };
 
-  // 사진 업로드 — 웹은 Blob, 폰은 파일객체로 (플랫폼 자동 분기)
+  // 사진 업로드 — 웹은 기존 방식(Blob), 폰(iOS/Android)은 expo-file-system 네이티브 업로드로 (플랫폼 자동 분기)
+  // RN/Expo SDK 57(react-native 0.86)부터 FormData에 {uri, type, name} 객체를 직접 append하는
+  // 예전 방식이 폰에서 깨져서("Unsupported FormDataPart implementation"), 폰에서는
+  // expo-file-system의 네이티브 멀티파트 업로드(UploadTask)를 대신 써요. expo-file-system은
+  // 웹에서는 지원되지 않으므로 웹은 그대로 fetch+Blob 방식을 유지합니다.
   const uploadIfNeeded = async (uri, index) => {
     if (!uri) return null;
     if (uri.startsWith("http")) return uri;
 
-    const formData = new FormData();
-
     if (Platform.OS === "web") {
+      const formData = new FormData();
       const blob = await (await fetch(uri)).blob();
       formData.append("file", blob);
-    } else {
-      formData.append("file", { uri, type: "image/jpeg", name: `photo_${index}.jpg` });
-    }
-    formData.append("upload_preset", cloudinaryConfig.uploadPreset);
+      formData.append("upload_preset", cloudinaryConfig.uploadPreset);
 
-    const res = await fetch(
+      const res = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`,
+        { method: "POST", body: formData }
+      );
+      const data = await res.json();
+      if (!data.secure_url) {
+        throw new Error(data.error?.message || "사진 업로드에 실패했어요.");
+      }
+      return data.secure_url;
+    }
+
+    const file = new File(uri);
+    const task = new UploadTask(
+      file,
       `https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`,
-      { method: "POST", body: formData }
+      {
+        httpMethod: "POST",
+        uploadType: UploadType.MULTIPART,
+        fieldName: "file",
+        mimeType: "image/jpeg",
+        parameters: { upload_preset: cloudinaryConfig.uploadPreset },
+      }
     );
-    const data = await res.json();
+
+    const result = await task.uploadAsync();
+    let data;
+    try {
+      data = JSON.parse(result.body);
+    } catch (e) {
+      throw new Error("사진 업로드에 실패했어요.");
+    }
     if (!data.secure_url) {
       throw new Error(data.error?.message || "사진 업로드에 실패했어요.");
     }

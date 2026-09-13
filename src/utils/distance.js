@@ -1,4 +1,3 @@
-// 두 좌표 사이 거리를 km로 계산 (하버사인 공식)
 export function distanceKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;

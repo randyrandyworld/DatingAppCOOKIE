@@ -11,6 +11,7 @@ import {
   registerForPushNotificationsAsync,
   savePushTokenForUser,
 } from "../utils/notifications";
+import { refreshLocationIfPermitted } from "../utils/locationRefresh";
 
 const AuthContext = createContext(null);
 
@@ -60,6 +61,17 @@ export function AuthProvider({ children }) {
     registerForPushNotificationsAsync().then((token) => {
       if (token) savePushTokenForUser(user.uid, token);
     });
+  }, [user, profile]);
+
+  // 로그인 세션당 한 번, 위치 권한을 이미 허용한 사용자라면 조용히 최신 위치로 갱신
+  // (프로필 수정 화면에 들어가지 않아도, 앱을 열 때마다 위치가 최신 상태로 유지되도록)
+  const refreshedLocationUidRef = useRef(null);
+  useEffect(() => {
+    if (!user || !profile) return;
+    if (refreshedLocationUidRef.current === user.uid) return;
+    refreshedLocationUidRef.current = user.uid;
+
+    refreshLocationIfPermitted(user.uid);
   }, [user, profile]);
 
   const signup = (email, password) =>

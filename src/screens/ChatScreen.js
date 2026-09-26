@@ -23,6 +23,7 @@ import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { showReportBlockMenu } from "../utils/blocking";
 import { sendPushNotificationToUser } from "../utils/notifications";
+import { COLORS } from "../theme";
 
 export default function ChatScreen({ route, navigation }) {
   const { matchId, otherUser } = route.params;
@@ -94,6 +95,7 @@ export default function ChatScreen({ route, navigation }) {
         ref={listRef}
         data={messages}
         keyExtractor={(item) => item.id}
+        style={{ backgroundColor: COLORS.bg }}
         contentContainerStyle={styles.list}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         renderItem={({ item }) => {
@@ -129,38 +131,40 @@ export default function ChatScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: COLORS.bg },
   headerButton: { paddingHorizontal: 12, paddingVertical: 6 },
-  headerButtonText: { fontSize: 22, fontWeight: "800", color: "#333" },
+  headerButtonText: { fontSize: 22, fontWeight: "800", color: COLORS.text },
   list: { padding: 16 },
   bubbleRow: { flexDirection: "row", marginBottom: 8 },
   bubbleRowMine: { justifyContent: "flex-end" },
   bubbleRowTheirs: { justifyContent: "flex-start" },
   bubble: { maxWidth: "78%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
-  bubbleMine: { backgroundColor: "#111111", borderBottomRightRadius: 4 },
-  bubbleTheirs: { backgroundColor: "#f0f0f0", borderBottomLeftRadius: 4 },
+  bubbleMine: { backgroundColor: COLORS.primary, borderBottomRightRadius: 4 },
+  bubbleTheirs: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderBottomLeftRadius: 4 },
   bubbleTextMine: { color: "#fff" },
-  bubbleTextTheirs: { color: "#222" },
+  bubbleTextTheirs: { color: COLORS.text },
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     padding: 12,
     borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
+    borderTopColor: COLORS.border,
     gap: 8,
+    backgroundColor: COLORS.card,
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderColor: COLORS.border,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     maxHeight: 100,
-    backgroundColor: "#fafafa",
+    backgroundColor: COLORS.bg,
+    color: COLORS.text,
   },
   sendButton: {
-    backgroundColor: "#111111",
+    backgroundColor: COLORS.primary,
     borderRadius: 20,
     paddingHorizontal: 18,
     paddingVertical: 12,

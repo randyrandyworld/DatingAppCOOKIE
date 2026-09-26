@@ -8,6 +8,7 @@ import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
 import ChatScreen from "../screens/ChatScreen";
+import UserProfileScreen from "../screens/UserProfileScreen";
 import MainTabs from "./MainTabs";
 import { navigationRef } from "./navigationRef";
 import { COLORS } from "../theme";
@@ -17,7 +18,6 @@ const Stack = createNativeStackNavigator();
 export default function RootNavigator() {
   const { user, hasProfile, loading } = useAuth();
 
-  // 매칭/메시지 푸시 알림을 탭했을 때 해당 채팅방으로 바로 이동
   useEffect(() => {
     if (!user || !hasProfile) return;
 
@@ -59,6 +59,11 @@ export default function RootNavigator() {
               name="Chat"
               component={ChatScreen}
               options={{ headerShown: true }}
+            />
+            <Stack.Screen
+              name="UserProfile"
+              component={UserProfileScreen}
+              options={{ headerShown: true, headerTitle: "프로필" }}
             />
           </>
         )}

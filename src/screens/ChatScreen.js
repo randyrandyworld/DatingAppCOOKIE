@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -23,6 +24,7 @@ import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { showReportBlockMenu } from "../utils/blocking";
 import { sendPushNotificationToUser } from "../utils/notifications";
+import { markMatchAsRead } from "../utils/unread";
 import { COLORS } from "../theme";
 
 export default function ChatScreen({ route, navigation }) {
@@ -34,7 +36,17 @@ export default function ChatScreen({ route, navigation }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: otherUser?.name || "채팅",
+      headerTitle: () => (
+        <TouchableOpacity
+          style={styles.headerTitleRow}
+          onPress={() => navigation.navigate("UserProfile", { otherUser })}
+        >
+          <Image source={{ uri: otherUser?.photos?.[0] }} style={styles.headerAvatar} />
+          <Text style={styles.headerName} numberOfLines={1}>
+            {otherUser?.name || "채팅"}
+          </Text>
+        </TouchableOpacity>
+      ),
       headerRight: () => (
         <TouchableOpacity onPress={onReportBlock} style={styles.headerButton}>
           <Text style={styles.headerButtonText}>⋯</Text>
@@ -62,6 +74,13 @@ export default function ChatScreen({ route, navigation }) {
     return unsub;
   }, [matchId]);
 
+  // 채팅방에 들어오면 "읽음" 처리 — 매칭 탭 빨간 뱃지가 사라짐
+  useEffect(() => {
+    if (matchId && user?.uid) {
+      markMatchAsRead(matchId, user.uid);
+    }
+  }, [matchId, user?.uid, messages.length]);
+
   const send = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -74,6 +93,7 @@ export default function ChatScreen({ route, navigation }) {
     await updateDoc(doc(db, "matches", matchId), {
       lastMessage: trimmed,
       lastMessageAt: serverTimestamp(),
+      lastSenderId: user.uid,
     });
 
     if (otherUser?.id) {
@@ -134,6 +154,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   headerButton: { paddingHorizontal: 12, paddingVertical: 6 },
   headerButtonText: { fontSize: 22, fontWeight: "800", color: COLORS.text },
+  headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.border },
+  headerName: { fontSize: 16, fontWeight: "700", maxWidth: 160, color: COLORS.text },
   list: { padding: 16 },
   bubbleRow: { flexDirection: "row", marginBottom: 8 },
   bubbleRowMine: { justifyContent: "flex-end" },

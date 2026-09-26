@@ -6,6 +6,7 @@ import MatchesScreen from "../screens/MatchesScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
 import { useAuth } from "../context/AuthContext";
 import { useUnreadMatchesCount } from "../utils/unread";
+import { COLORS, FONTS } from "../theme";
 
 const Tab = createBottomTabNavigator();
 
@@ -17,9 +18,13 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#111111",
-        tabBarInactiveTintColor: "#aaa",
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: "#C9B8A3",
+        tabBarStyle: { backgroundColor: COLORS.card, borderTopColor: COLORS.border },
         tabBarBadgeStyle: { backgroundColor: "#e0243e" },
+        headerStyle: { backgroundColor: COLORS.card },
+        headerTitleStyle: { color: COLORS.text, fontFamily: FONTS.heading, fontSize: 18 },
+        headerTintColor: COLORS.primary,
       }}
     >
       <Tab.Screen
@@ -28,7 +33,7 @@ export default function MainTabs() {
         options={{
           title: "홈",
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🔥</Text>
+            <Text style={{ color, fontSize: size }}>🍪</Text>
           ),
         }}
       />

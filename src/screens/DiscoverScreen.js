@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Slider from "@react-native-community/slider";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
@@ -19,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 import { recordSwipeAndCheckMatch } from "../utils/matching";
 import { getBlockedIds, showReportBlockMenu } from "../utils/blocking";
 import { distanceKm } from "../utils/distance";
+import { COLORS, FONTS } from "../theme";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = width * 0.28;
@@ -26,12 +28,14 @@ const SWIPE_THRESHOLD = width * 0.28;
 export default function DiscoverScreen({ navigation }) {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [rawList, setRawList] = useState([]);
-  const [maxDist, setMaxDist] = useState(50);
+  const [rawList, setRawList] = useState([]); // 필터 전 원본
+  const [maxDist, setMaxDist] = useState(50); // 거리 설정 (기본 50km)
+  const [filterOpen, setFilterOpen] = useState(false); // 거리 슬라이더를 눌렀을 때만 펼쳐지도록
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
 
-  const [matchInfo, setMatchInfo] = useState(null);
+  // 매칭 연출용 상태
+  const [matchInfo, setMatchInfo] = useState(null); // { matchId, otherUser } or null
 
   const position = useRef(new Animated.ValueXY()).current;
 
@@ -178,25 +182,35 @@ export default function DiscoverScreen({ navigation }) {
   const next = candidates[index + 1];
 
   return (
-    <View style={styles.container}>
-      <View style={styles.filterBar}>
-        <Text style={styles.filterLabel}>거리 {maxDist}km 이내</Text>
-        <Slider
-          style={{ width: "100%", height: 40 }}
-          minimumValue={1}
-          maximumValue={100}
-          step={1}
-          value={maxDist}
-          onValueChange={setMaxDist}
-          minimumTrackTintColor="#111111"
-          maximumTrackTintColor="#eee"
-          thumbTintColor="#111111"
-        />
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* 거리 필터 — 평소엔 작은 알약 버튼 하나만, 누르면 슬라이더가 펼쳐짐 (화면 위쪽을 너무 차지하지 않도록) */}
+      <View style={styles.filterHeader}>
+        <TouchableOpacity
+          style={styles.filterPill}
+          onPress={() => setFilterOpen((v) => !v)}
+        >
+          <Text style={styles.filterPillText}>🍪 {maxDist}km 이내 {filterOpen ? "▲" : "▼"}</Text>
+        </TouchableOpacity>
       </View>
+      {filterOpen && (
+        <View style={styles.filterBar}>
+          <Slider
+            style={{ width: "100%", height: 36 }}
+            minimumValue={1}
+            maximumValue={100}
+            step={1}
+            value={maxDist}
+            onValueChange={setMaxDist}
+            minimumTrackTintColor={COLORS.primary}
+            maximumTrackTintColor={COLORS.border}
+            thumbTintColor={COLORS.primary}
+          />
+        </View>
+      )}
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#111111" />
+          <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : !current ? (
         <View style={styles.center}>
@@ -259,7 +273,7 @@ export default function DiscoverScreen({ navigation }) {
           onLater={keepSwiping}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -381,26 +395,38 @@ function ProfileCard({ person }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: COLORS.bg },
+  filterHeader: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 6,
+  },
+  filterPill: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  filterPillText: { fontSize: 13, fontWeight: "700", color: COLORS.primary },
   filterBar: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    paddingBottom: 6,
   },
-  filterLabel: { fontWeight: "700", fontSize: 14, color: "#333" },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
   },
-  emptyTitle: { fontSize: 18, fontWeight: "700", marginBottom: 6 },
-  emptySubtitle: { color: "#888", textAlign: "center" },
+  emptyTitle: { fontSize: 18, marginBottom: 6, color: COLORS.text, fontFamily: FONTS.heading },
+  emptySubtitle: { color: COLORS.textLight, textAlign: "center" },
   refreshButton: {
     marginTop: 24,
-    backgroundColor: "#111111",
+    backgroundColor: COLORS.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
@@ -412,7 +438,7 @@ const styles = StyleSheet.create({
     width: width * 0.88,
     height: "78%",
     borderRadius: 20,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: COLORS.card,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOpacity: 0.15,
@@ -428,7 +454,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(59,38,22,0.55)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -465,7 +491,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 18,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: "rgba(59,38,22,0.55)",
   },
   name: { color: "#fff", fontSize: 22, fontWeight: "800" },
   distance: { color: "#fff", marginTop: 2, fontSize: 13, fontWeight: "600" },
@@ -489,9 +515,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-  passButton: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#eee" },
-  likeButton: { backgroundColor: "#111111" },
-  actionIcon: { fontSize: 26, color: "#555" },
+  passButton: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
+  likeButton: { backgroundColor: COLORS.primary },
+  actionIcon: { fontSize: 26, color: COLORS.textLight },
   likeIcon: { color: "#fff" },
 
   matchOverlay: {

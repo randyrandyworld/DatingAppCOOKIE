@@ -14,7 +14,7 @@ export const COLORS = {
 };
 
 export const FONTS = {
-  // 귀엽고 동글동글한 느낌의 제목용 폰트 (Google Fonts "Jua")
+  // 부드럽고 따뜻한 느낌의 제목용 폰트 (Google Fonts "Gowun Dodum")
   // 본문은 가독성을 위해 시스템 기본 폰트를 그대로 사용
-  heading: "Jua_400Regular",
+  heading: "GowunDodum_400Regular",
 };

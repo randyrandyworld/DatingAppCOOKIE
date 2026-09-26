@@ -26,7 +26,7 @@
     "react-native-web": "~0.21.0",
     "typescript": "~5.9.2",
     "expo-font": "~57.0.4",
-    "@expo-google-fonts/jua": "^0.4.1"
+    "@expo-google-fonts/gowun-dodum": "^0.4.1"
   },
   "scripts": {
     "start": "expo start",

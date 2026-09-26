@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Slider from "@react-native-community/slider";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
@@ -180,7 +181,7 @@ export default function DiscoverScreen({ navigation }) {
   const next = candidates[index + 1];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* 거리 필터 — 평소엔 작은 알약 버튼 하나만, 누르면 슬라이더가 펼쳐짐 (화면 위쪽을 너무 차지하지 않도록) */}
       <View style={styles.filterHeader}>
         <TouchableOpacity
@@ -262,7 +263,7 @@ export default function DiscoverScreen({ navigation }) {
           </View>
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

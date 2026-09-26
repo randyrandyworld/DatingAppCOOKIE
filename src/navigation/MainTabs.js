@@ -4,16 +4,22 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import DiscoverScreen from "../screens/DiscoverScreen";
 import MatchesScreen from "../screens/MatchesScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
+import { useAuth } from "../context/AuthContext";
+import { useUnreadMatchesCount } from "../utils/unread";
 
 const Tab = createBottomTabNavigator();
 
 export default function MainTabs() {
+  const { user } = useAuth();
+  const unreadCount = useUnreadMatchesCount(user?.uid);
+
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: "#111111",
         tabBarInactiveTintColor: "#aaa",
+        tabBarBadgeStyle: { backgroundColor: "#e0243e" },
       }}
     >
       <Tab.Screen
@@ -33,6 +39,7 @@ export default function MainTabs() {
           title: "매칭",
           headerShown: true,
           headerTitle: "매칭된 사람들",
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarIcon: ({ color, size }) => (
             <Text style={{ color, fontSize: size }}>💬</Text>
           ),

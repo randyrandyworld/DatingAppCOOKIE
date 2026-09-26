@@ -6,6 +6,7 @@ import {
   Dimensions,
   Image,
   PanResponder,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -25,10 +26,13 @@ const SWIPE_THRESHOLD = width * 0.28;
 export default function DiscoverScreen({ navigation }) {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [rawList, setRawList] = useState([]); // 필터 전 원본
-  const [maxDist, setMaxDist] = useState(50); // 거리 설정 (기본 50km)
+  const [rawList, setRawList] = useState([]);
+  const [maxDist, setMaxDist] = useState(50);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+
+  // 매칭 연출용 상태
+  const [matchInfo, setMatchInfo] = useState(null); // { matchId, otherUser } or null
 
   const position = useRef(new Animated.ValueXY()).current;
 
@@ -52,7 +56,6 @@ export default function DiscoverScreen({ navigation }) {
           (u) =>
             u.id !== user.uid && !swipedIds.has(u.id) && !blockedIds.has(u.id)
         )
-        // ▼ 만나고 싶은 성별 필터 (내 seekingGender와 상대 gender가 같은 사람만)
         .filter((u) => !profile?.seekingGender || u.gender === profile.seekingGender);
 
       setRawList(list);
@@ -64,7 +67,6 @@ export default function DiscoverScreen({ navigation }) {
     }
   };
 
-  // ▼ 거리 필터 + 각 카드에 거리(_distance) 붙이기
   const candidates = useMemo(() => {
     const myLoc = profile?.location;
     return rawList
@@ -75,12 +77,9 @@ export default function DiscoverScreen({ navigation }) {
         }
         return { ...u, _distance: d };
       })
-      // 거리를 모르면(둘 중 하나라도 위치 없음) 일단 보여주고,
-      // 알면 설정한 maxDist 이내만 보여줌
       .filter((u) => u._distance == null || u._distance <= maxDist);
   }, [rawList, maxDist, profile?.location]);
 
-  // 거리 슬라이더 움직이면 카드 처음부터 다시
   useEffect(() => {
     setIndex(0);
   }, [maxDist]);
@@ -139,14 +138,7 @@ export default function DiscoverScreen({ navigation }) {
         profile?.name
       );
       if (matchId) {
-        Alert.alert("매칭 성공! 🎉", `${target.name}님과 매칭됐어요!`, [
-          { text: "나중에", style: "cancel" },
-          {
-            text: "채팅하기",
-            onPress: () =>
-              navigation.navigate("Chat", { matchId, otherUser: target }),
-          },
-        ]);
+        setMatchInfo({ matchId, otherUser: target });
       }
     } catch (e) {
       // 조용히 무시
@@ -169,6 +161,15 @@ export default function DiscoverScreen({ navigation }) {
     });
   };
 
+  const goToChat = () => {
+    if (!matchInfo) return;
+    const { matchId, otherUser } = matchInfo;
+    setMatchInfo(null);
+    navigation.navigate("Chat", { matchId, otherUser });
+  };
+
+  const keepSwiping = () => setMatchInfo(null);
+
   const rotate = position.x.interpolate({
     inputRange: [-width / 2, 0, width / 2],
     outputRange: ["-10deg", "0deg", "10deg"],
@@ -179,7 +180,6 @@ export default function DiscoverScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* 거리 설정 슬라이더 */}
       <View style={styles.filterBar}>
         <Text style={styles.filterLabel}>거리 {maxDist}km 이내</Text>
         <Slider
@@ -228,7 +228,7 @@ export default function DiscoverScreen({ navigation }) {
                 },
               ]}
             >
-              <ProfileCard person={current} />
+              <ProfileCard key={current.id} person={current} />
               <TouchableOpacity style={styles.moreButton} onPress={handleReportBlock}>
                 <Text style={styles.moreButtonText}>⋯</Text>
               </TouchableOpacity>
@@ -251,18 +251,119 @@ export default function DiscoverScreen({ navigation }) {
           </View>
         </>
       )}
+
+      {/* 쿠키 매치! 펑키한 연출 */}
+      {matchInfo && (
+        <CookieMatchOverlay
+          matchInfo={matchInfo}
+          profile={profile}
+          onChat={goToChat}
+          onLater={keepSwiping}
+        />
+      )}
     </View>
   );
 }
 
+// 쿠키 매치! 컨페티 + 통통 튀는 연출
+function CookieMatchOverlay({ matchInfo, profile, onChat, onLater }) {
+  const bounce = useRef(new Animated.Value(0)).current;
+  const pop = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    Animated.spring(pop, {
+      toValue: 1,
+      friction: 5,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounce, { toValue: -14, duration: 420, useNativeDriver: true }),
+        Animated.timing(bounce, { toValue: 0, duration: 420, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const confettiPositions = [
+    { top: "8%", left: "12%", emoji: "🍪", size: 22, rotate: "-15deg" },
+    { top: "14%", left: "78%", emoji: "✨", size: 20, rotate: "10deg" },
+    { top: "22%", left: "22%", emoji: "🎊", size: 18, rotate: "5deg" },
+    { top: "18%", left: "60%", emoji: "🍪", size: 16, rotate: "-8deg" },
+    { top: "78%", left: "15%", emoji: "✨", size: 18, rotate: "12deg" },
+    { top: "82%", left: "72%", emoji: "🍪", size: 20, rotate: "-10deg" },
+    { top: "70%", left: "85%", emoji: "🎊", size: 16, rotate: "6deg" },
+  ];
+
+  return (
+    <View style={styles.matchOverlay}>
+      {confettiPositions.map((c, i) => (
+        <Text
+          key={i}
+          style={[
+            styles.confettiEmoji,
+            { top: c.top, left: c.left, fontSize: c.size, transform: [{ rotate: c.rotate }] },
+          ]}
+        >
+          {c.emoji}
+        </Text>
+      ))}
+
+      <Animated.Text style={[styles.cookieTitle, { transform: [{ translateY: bounce }] }]}>
+        COOKIE!
+      </Animated.Text>
+      <Text style={styles.matchSubtitle}>
+        {matchInfo.otherUser?.name}님과 서로 좋아요를 눌렀어요
+      </Text>
+
+      <Animated.View style={[styles.matchPhotos, { transform: [{ scale: pop }] }]}>
+        <Image source={{ uri: profile?.photos?.[0] }} style={styles.matchPhoto} />
+        <View style={styles.matchCookieBadge}>
+          <Text style={styles.matchCookieText}>🍪</Text>
+        </View>
+        <Image source={{ uri: matchInfo.otherUser?.photos?.[0] }} style={styles.matchPhoto} />
+      </Animated.View>
+
+      <TouchableOpacity style={styles.matchChatButton} onPress={onChat}>
+        <Text style={styles.matchChatButtonText}>대화 시작하기 🍪</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.matchLaterButton} onPress={onLater}>
+        <Text style={styles.matchLaterButtonText}>나중에 할게요</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// 카드 안에서 좌우 탭으로 사진 넘기기
 function ProfileCard({ person }) {
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const photos = person.photos?.length ? person.photos : [null];
+
+  const goPrev = () => setPhotoIndex((i) => (i > 0 ? i - 1 : i));
+  const goNext = () => setPhotoIndex((i) => (i < photos.length - 1 ? i + 1 : i));
+
   return (
     <>
       <Image
-        source={{ uri: person.photos?.[0] }}
+        source={{ uri: photos[photoIndex] }}
         style={styles.photo}
         resizeMode="cover"
       />
+
+      <View style={styles.tapZones} pointerEvents="box-none">
+        <Pressable style={styles.tapZoneLeft} onPress={goPrev} />
+        <Pressable style={styles.tapZoneRight} onPress={goNext} />
+      </View>
+
+      {photos.length > 1 && (
+        <View style={styles.dotsRow} pointerEvents="none">
+          {photos.map((_, i) => (
+            <View key={i} style={[styles.dot, i === photoIndex && styles.dotActive]} />
+          ))}
+        </View>
+      )}
+
       <View style={styles.infoBox}>
         <Text style={styles.name}>
           {person.name}, {person.age}
@@ -330,6 +431,31 @@ const styles = StyleSheet.create({
   },
   moreButtonText: { color: "#fff", fontSize: 20, fontWeight: "800" },
   photo: { width: "100%", height: "100%" },
+  tapZones: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+  },
+  tapZoneLeft: { flex: 1 },
+  tapZoneRight: { flex: 1 },
+  dotsRow: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    right: 10,
+    flexDirection: "row",
+    gap: 4,
+  },
+  dot: {
+    flex: 1,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.4)",
+  },
+  dotActive: { backgroundColor: "#fff" },
   infoBox: {
     position: "absolute",
     bottom: 0,
@@ -364,4 +490,71 @@ const styles = StyleSheet.create({
   likeButton: { backgroundColor: "#111111" },
   actionIcon: { fontSize: 26, color: "#555" },
   likeIcon: { color: "#fff" },
+
+  // 쿠키 매치 연출 스타일
+  matchOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#F5C64B",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    overflow: "hidden",
+  },
+  confettiEmoji: { position: "absolute" },
+  cookieTitle: {
+    color: "#111111",
+    fontSize: 46,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginBottom: 6,
+    textShadowColor: "rgba(255,255,255,0.6)",
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 0,
+  },
+  matchSubtitle: {
+    color: "#3a2f14",
+    fontSize: 15,
+    marginBottom: 32,
+    textAlign: "center",
+    fontWeight: "600",
+  },
+  matchPhotos: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  matchPhoto: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 4,
+    borderColor: "#111111",
+  },
+  matchCookieBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#fff",
+    borderWidth: 3,
+    borderColor: "#111111",
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: -16,
+    zIndex: 1,
+  },
+  matchCookieText: { fontSize: 22 },
+  matchChatButton: {
+    backgroundColor: "#111111",
+    borderRadius: 28,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    marginBottom: 14,
+  },
+  matchChatButtonText: { color: "#F5C64B", fontWeight: "800", fontSize: 16 },
+  matchLaterButton: { paddingVertical: 8 },
+  matchLaterButtonText: { color: "#5c4a1a", fontSize: 14, fontWeight: "600" },
 });

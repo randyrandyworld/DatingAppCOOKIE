@@ -12,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Slider from "@react-native-community/slider";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
@@ -20,7 +19,6 @@ import { useAuth } from "../context/AuthContext";
 import { recordSwipeAndCheckMatch } from "../utils/matching";
 import { getBlockedIds, showReportBlockMenu } from "../utils/blocking";
 import { distanceKm } from "../utils/distance";
-import { COLORS, FONTS } from "../theme";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = width * 0.28;
@@ -28,13 +26,12 @@ const SWIPE_THRESHOLD = width * 0.28;
 export default function DiscoverScreen({ navigation }) {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [rawList, setRawList] = useState([]); // 필터 전 원본
-  const [maxDist, setMaxDist] = useState(50); // 거리 설정 (기본 50km)
+  const [rawList, setRawList] = useState([]);
+  const [maxDist, setMaxDist] = useState(50);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
 
-  // 매칭 연출용 상태
-  const [matchInfo, setMatchInfo] = useState(null); // { matchId, otherUser } or null
+  const [matchInfo, setMatchInfo] = useState(null);
 
   const position = useRef(new Animated.ValueXY()).current;
 
@@ -182,7 +179,6 @@ export default function DiscoverScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* 거리 설정 슬라이더 */}
       <View style={styles.filterBar}>
         <Text style={styles.filterLabel}>거리 {maxDist}km 이내</Text>
         <Slider
@@ -200,7 +196,7 @@ export default function DiscoverScreen({ navigation }) {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color="#111111" />
         </View>
       ) : !current ? (
         <View style={styles.center}>
@@ -254,11 +250,93 @@ export default function DiscoverScreen({ navigation }) {
           </View>
         </>
       )}
+
+      {matchInfo && (
+        <CookieMatchOverlay
+          matchInfo={matchInfo}
+          profile={profile}
+          onChat={goToChat}
+          onLater={keepSwiping}
+        />
+      )}
     </View>
   );
 }
 
-// 카드 안에서 좌우 탭으로 사진 넘기기
+function CookieMatchOverlay({ matchInfo, profile, onChat, onLater }) {
+  const bounce = useRef(new Animated.Value(0)).current;
+  const pop = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    Animated.spring(pop, {
+      toValue: 1,
+      friction: 5,
+      tension: 80,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounce, { toValue: -14, duration: 420, useNativeDriver: true }),
+        Animated.timing(bounce, { toValue: 0, duration: 420, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const confettiPositions = [
+    { top: "8%", left: "12%", emoji: "🍪", size: 22, rotate: "-15deg" },
+    { top: "14%", left: "78%", emoji: "✨", size: 20, rotate: "10deg" },
+    { top: "22%", left: "22%", emoji: "🎊", size: 18, rotate: "5deg" },
+    { top: "18%", left: "60%", emoji: "🍪", size: 16, rotate: "-8deg" },
+    { top: "78%", left: "15%", emoji: "✨", size: 18, rotate: "12deg" },
+    { top: "82%", left: "72%", emoji: "🍪", size: 20, rotate: "-10deg" },
+    { top: "70%", left: "85%", emoji: "🎊", size: 16, rotate: "6deg" },
+  ];
+
+  return (
+    <View style={styles.matchOverlay}>
+      {confettiPositions.map((c, i) => (
+        <Text
+          key={i}
+          style={[
+            styles.confettiEmoji,
+            { top: c.top, left: c.left, fontSize: c.size, transform: [{ rotate: c.rotate }] },
+          ]}
+        >
+          {c.emoji}
+        </Text>
+      ))}
+
+      <Animated.Text style={[styles.cookieTitle, { transform: [{ translateY: bounce }] }]}>
+        COOKIE!
+      </Animated.Text>
+      <Text style={styles.matchSubtitle}>
+        {matchInfo.otherUser?.name}님과 서로 좋아요를 눌렀어요
+      </Text>
+      {matchInfo.otherUser?._distance != null && (
+        <Text style={styles.matchDistance}>
+          📍 나와 {matchInfo.otherUser._distance.toFixed(1)}km 거리
+        </Text>
+      )}
+
+      <Animated.View style={[styles.matchPhotos, { transform: [{ scale: pop }] }]}>
+        <Image source={{ uri: profile?.photos?.[0] }} style={styles.matchPhoto} />
+        <View style={styles.matchCookieBadge}>
+          <Text style={styles.matchCookieText}>🍪</Text>
+        </View>
+        <Image source={{ uri: matchInfo.otherUser?.photos?.[0] }} style={styles.matchPhoto} />
+      </Animated.View>
+
+      <TouchableOpacity style={styles.matchChatButton} onPress={onChat}>
+        <Text style={styles.matchChatButtonText}>대화 시작하기 🍪</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.matchLaterButton} onPress={onLater}>
+        <Text style={styles.matchLaterButtonText}>나중에 할게요</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function ProfileCard({ person }) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const photos = person.photos?.length ? person.photos : [null];
@@ -290,10 +368,12 @@ function ProfileCard({ person }) {
       <View style={styles.infoBox}>
         <Text style={styles.name}>
           {person.name}, {person.age}
+          {person.height ? ` · ${person.height}cm` : ""}
         </Text>
         {person._distance != null && (
           <Text style={styles.distance}>📍 {person._distance.toFixed(1)}km 거리</Text>
         )}
+        {!!person.job && <Text style={styles.bio}>💼 {person.job}</Text>}
         {!!person.bio && <Text style={styles.bio}>{person.bio}</Text>}
       </View>
     </>
@@ -301,38 +381,26 @@ function ProfileCard({ person }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  filterHeader: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
-  },
-  filterPill: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  filterPillText: { fontSize: 13, fontWeight: "700", color: COLORS.primary },
+  container: { flex: 1, backgroundColor: "#fff" },
   filterBar: {
     paddingHorizontal: 20,
-    paddingBottom: 6,
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
+  filterLabel: { fontWeight: "700", fontSize: 14, color: "#333" },
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
   },
-  emptyTitle: { fontSize: 18, marginBottom: 6, color: COLORS.text, fontFamily: FONTS.heading },
-  emptySubtitle: { color: COLORS.textLight, textAlign: "center" },
+  emptyTitle: { fontSize: 18, fontWeight: "700", marginBottom: 6 },
+  emptySubtitle: { color: "#888", textAlign: "center" },
   refreshButton: {
     marginTop: 24,
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#111111",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
@@ -344,7 +412,7 @@ const styles = StyleSheet.create({
     width: width * 0.88,
     height: "78%",
     borderRadius: 20,
-    backgroundColor: COLORS.card,
+    backgroundColor: "#f5f5f5",
     overflow: "hidden",
     shadowColor: "#000",
     shadowOpacity: 0.15,
@@ -397,7 +465,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 18,
-    backgroundColor: "rgba(59,38,22,0.55)",
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
   name: { color: "#fff", fontSize: 22, fontWeight: "800" },
   distance: { color: "#fff", marginTop: 2, fontSize: 13, fontWeight: "600" },
@@ -421,12 +489,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
-  passButton: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
-  likeButton: { backgroundColor: COLORS.primary },
-  actionIcon: { fontSize: 26, color: COLORS.textLight },
+  passButton: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#eee" },
+  likeButton: { backgroundColor: "#111111" },
+  actionIcon: { fontSize: 26, color: "#555" },
   likeIcon: { color: "#fff" },
 
-  // 쿠키 매치 연출 스타일
   matchOverlay: {
     position: "absolute",
     top: 0,
@@ -453,9 +520,15 @@ const styles = StyleSheet.create({
   matchSubtitle: {
     color: "#3a2f14",
     fontSize: 15,
-    marginBottom: 32,
+    marginBottom: 6,
     textAlign: "center",
     fontWeight: "600",
+  },
+  matchDistance: {
+    color: "#5c4a1a",
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 20,
   },
   matchPhotos: {
     flexDirection: "row",
@@ -491,5 +564,5 @@ const styles = StyleSheet.create({
   },
   matchChatButtonText: { color: "#F5C64B", fontWeight: "800", fontSize: 16 },
   matchLaterButton: { paddingVertical: 8 },
-  matchLaterButtonText: { color: "#5c4a1a", fontSize: 14, fontWeight: "600" },
+  matchLaterButtonText: { color: "#999", fontSize: 14 },
 });

@@ -30,6 +30,8 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const [age, setAge] = useState(existing?.age ? String(existing.age) : "");
   const [gender, setGender] = useState(existing?.gender || "");
   const [seekingGender, setSeekingGender] = useState(existing?.seekingGender || "");
+  const [height, setHeight] = useState(existing?.height ? String(existing.height) : "");
+  const [job, setJob] = useState(existing?.job || "");
   const [bio, setBio] = useState(existing?.bio || "");
   const [photos, setPhotos] = useState(
     existing?.photos?.length
@@ -69,11 +71,6 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     });
   };
 
-  // 사진 업로드 — 웹은 기존 방식(Blob), 폰(iOS/Android)은 expo-file-system 네이티브 업로드로 (플랫폼 자동 분기)
-  // RN/Expo SDK 57(react-native 0.86)부터 FormData에 {uri, type, name} 객체를 직접 append하는
-  // 예전 방식이 폰에서 깨져서("Unsupported FormDataPart implementation"), 폰에서는
-  // expo-file-system의 네이티브 멀티파트 업로드(UploadTask)를 대신 써요. expo-file-system은
-  // 웹에서는 지원되지 않으므로 웹은 그대로 fetch+Blob 방식을 유지합니다.
   const uploadIfNeeded = async (uri, index) => {
     if (!uri) return null;
     if (uri.startsWith("http")) return uri;
@@ -121,7 +118,6 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     return data.secure_url;
   };
 
-  // 위치 받기 (최대 6초, 못 받아도 저장은 계속 진행)
   const getMyLocation = async () => {
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
@@ -166,6 +162,8 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           age: ageNum,
           gender,
           seekingGender,
+          ...(height ? { height: Number(height) } : {}),
+          job: job.trim(),
           bio: bio.trim(),
           photos: finalPhotos,
           ...(location ? { location } : {}),
@@ -254,6 +252,23 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           </TouchableOpacity>
         ))}
       </View>
+
+      <Text style={styles.label}>키 (cm, 선택)</Text>
+      <TextInput
+        style={styles.input}
+        value={height}
+        onChangeText={setHeight}
+        placeholder="예: 175"
+        keyboardType="number-pad"
+      />
+
+      <Text style={styles.label}>직업 (선택, 자유롭게)</Text>
+      <TextInput
+        style={styles.input}
+        value={job}
+        onChangeText={setJob}
+        placeholder="예: 우주비행사 😄"
+      />
 
       <Text style={styles.label}>자기소개</Text>
       <TextInput

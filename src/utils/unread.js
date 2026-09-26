@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   collection,
   doc,
@@ -7,7 +8,6 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { useeEffect, useState } from "react";
 import { db } from "../firebase";
 
 // 매칭 문서 하나가 나(myUid) 기준으로 안읽음인지 판단

@@ -19,45 +19,29 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-<<<<<<< HEAD
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: "#C9B8A3",
-        tabBarStyle: { backgroundColor: COLORS.card, borderTopColor: COLORS.border },
-        tabBarBadgeStyle: { backgroundColor: "#e0243e" },
-        headerStyle: { backgroundColor: COLORS.card },
-        headerTitleStyle: { color: COLORS.text, fontFamily: FONTS.heading, fontSize: 18 },
-        headerTintColor: COLORS.primary,
-=======
         tabBarShowLabel: false, // 인스타처럼 텍스트 라벨 없이 아이콘만
-        tabBarActiveTintColor: "#111111",
-        tabBarInactiveTintColor: "#111111", // 인스타는 선택 안 돼도 다 검정, 굵기로만 구분
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textLight,
         tabBarStyle: {
           height: Platform.OS === "ios" ? 84 : 60,
           paddingTop: 10,
           paddingBottom: Platform.OS === "ios" ? 26 : 8,
           borderTopWidth: 0.5,
-          borderTopColor: "#dbdbdb",
-          backgroundColor: "#ffffff",
+          borderTopColor: COLORS.border,
+          backgroundColor: COLORS.card,
         },
->>>>>>> 7068d641f5e4e1b507a797bac9e18919c0e3ace8
       }}
     >
       <Tab.Screen
         name="Discover"
         component={DiscoverScreen}
         options={{
-<<<<<<< HEAD
-          title: "홈",
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🍪</Text>
-=======
           tabBarIcon: ({ focused, size }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}
               size={size ?? 26}
               color="#111111"
             />
->>>>>>> 7068d641f5e4e1b507a797bac9e18919c0e3ace8
           ),
         }}
       />

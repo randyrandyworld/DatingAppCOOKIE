@@ -4,8 +4,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import DiscoverScreen from "../screens/DiscoverScreen";
 import MatchesScreen from "../screens/MatchesScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
-import { useAuth } from "../context/AuthContext";
-import { useUnreadMatchesCount } from "../utils/unread";
 
 const Tab = createBottomTabNavigator();
 
@@ -19,7 +17,6 @@ export default function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: "#111111",
         tabBarInactiveTintColor: "#aaa",
-        tabBarBadgeStyle: { backgroundColor: "#e0243e" },
       }}
     >
       <Tab.Screen
@@ -28,7 +25,7 @@ export default function MainTabs() {
         options={{
           title: "홈",
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ color, fontSize: size }}>🔥</Text>
+            <Text style={{ color, fontSize: size }}>🍪</Text>
           ),
         }}
       />

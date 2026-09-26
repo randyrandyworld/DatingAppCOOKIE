@@ -10,6 +10,7 @@ import ProfileFormScreen from "../screens/ProfileFormScreen";
 import ChatScreen from "../screens/ChatScreen";
 import MainTabs from "./MainTabs";
 import { navigationRef } from "./navigationRef";
+import { COLORS } from "../theme";
 
 const Stack = createNativeStackNavigator();
 
@@ -33,8 +34,8 @@ export default function RootNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color="#111111" />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.bg }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }

@@ -13,12 +13,12 @@ import {
   doc,
   getDoc,
   onSnapshot,
-  orderBy,
   query,
   where,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
+import { COLORS, FONTS } from "../theme";
 
 export default function MatchesScreen({ navigation }) {
   const { user } = useAuth();
@@ -26,10 +26,11 @@ export default function MatchesScreen({ navigation }) {
   const [matches, setMatches] = useState([]);
 
   useEffect(() => {
+    // orderBy를 Firestore 쿼리에 같이 넣으면 복합 색인(composite index)이 필요해서
+    // 색인이 없으면 onSnapshot이 조용히 실패해(매칭이 생겨도 목록엔 안 뜸) 클라이언트에서 정렬해요.
     const q = query(
       collection(db, "matches"),
-      where("users", "array-contains", user.uid),
-      orderBy("lastMessageAt", "desc")
+      where("users", "array-contains", user.uid)
     );
 
     const unsub = onSnapshot(
@@ -48,13 +49,18 @@ export default function MatchesScreen({ navigation }) {
                   ? { id: otherSnap.id, ...otherSnap.data() }
                   : { id: otherUid, name: "알 수 없음" },
                 lastMessage: data.lastMessage,
+                lastMessageAt: data.lastMessageAt?.toMillis?.() ?? 0,
               };
             })
         );
+        rows.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
         setMatches(rows);
         setLoading(false);
       },
-      () => setLoading(false)
+      (e) => {
+        console.error("매칭 목록 불러오기 실패:", e);
+        setLoading(false);
+      }
     );
 
     return unsub;
@@ -63,7 +69,7 @@ export default function MatchesScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#111111" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
@@ -81,6 +87,7 @@ export default function MatchesScreen({ navigation }) {
     <FlatList
       data={matches}
       keyExtractor={(item) => item.id}
+      style={{ backgroundColor: COLORS.bg }}
       contentContainerStyle={styles.list}
       renderItem={({ item }) => (
         <TouchableOpacity
@@ -114,25 +121,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
+    backgroundColor: COLORS.bg,
   },
-  emptyTitle: { fontSize: 18, fontWeight: "700", marginBottom: 6 },
-  emptySubtitle: { color: "#888" },
-  list: { padding: 16 },
+  emptyTitle: { fontSize: 18, marginBottom: 6, color: COLORS.text, fontFamily: FONTS.heading },
+  emptySubtitle: { color: COLORS.textLight },
+  list: { padding: 16, backgroundColor: COLORS.bg },
   row: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
+    borderBottomColor: COLORS.border,
   },
   avatar: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#eee",
+    backgroundColor: COLORS.border,
     marginRight: 14,
   },
   rowText: { flex: 1 },
-  rowName: { fontSize: 16, fontWeight: "700" },
-  rowMessage: { color: "#888", marginTop: 2 },
+  rowName: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  rowMessage: { color: COLORS.textLight, marginTop: 2 },
 });

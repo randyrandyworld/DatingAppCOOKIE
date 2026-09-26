@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
+import { COLORS, FONTS } from "../theme";
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -38,12 +39,13 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Text style={styles.logo}>♥ Cookie</Text>
+      <Text style={styles.logo}>🍪 Cookie</Text>
       <Text style={styles.subtitle}>다시 만나서 반가워요</Text>
 
       <TextInput
         style={styles.input}
         placeholder="이메일"
+        placeholderTextColor={COLORS.textLight}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -52,6 +54,7 @@ export default function LoginScreen({ navigation }) {
       <TextInput
         style={styles.input}
         placeholder="비밀번호"
+        placeholderTextColor={COLORS.textLight}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -94,37 +97,38 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 28,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.bg,
   },
   logo: {
     fontSize: 36,
-    fontWeight: "800",
-    color: "#111111",
+    color: COLORS.primary,
     textAlign: "center",
     marginBottom: 6,
+    fontFamily: FONTS.heading,
   },
   subtitle: {
     textAlign: "center",
-    color: "#888",
+    color: COLORS.textLight,
     marginBottom: 32,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,
     fontSize: 16,
-    backgroundColor: "#fafafa",
+    backgroundColor: COLORS.card,
+    color: COLORS.text,
   },
   button: {
-    backgroundColor: "#111111",
+    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: "center",
     marginTop: 8,
   },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  link: { color: "#111111", textAlign: "center", marginTop: 20 },
+  link: { color: COLORS.primary, textAlign: "center", marginTop: 20 },
 });

@@ -5,7 +5,7 @@
 //    더미 유저 기능이 동작해요. 관리자를 추가/삭제할 땐 이 파일과 규칙 두 군데를 같이 바꿔주세요.
 export const ADMIN_UIDS = [
   "0oQnnfN9OlMtHhkotmctVkeRAMr2", // 승일
-  // "여기에_친구_UID",
+  "J616YkESF8PQRowNvxTwENgtPio2", // 친구
 ];
 
 export const isAdminUid = (uid) => !!uid && ADMIN_UIDS.includes(uid);

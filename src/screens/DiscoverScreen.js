@@ -21,6 +21,8 @@ import { recordSwipeAndCheckMatch } from "../utils/matching";
 import { getBlockedIds, showReportBlockMenu, REPORT_HIDE_THRESHOLD } from "../utils/blocking";
 import { distanceKm } from "../utils/distance";
 import { isAdminUid } from "../adminConfig";
+import CookieLogo from "../components/CookieLogo";
+import FadeOverlay from "../components/FadeOverlay";
 import { COLORS, FONTS } from "../theme";
 
 const { width } = Dimensions.get("window");
@@ -184,15 +186,28 @@ export default function DiscoverScreen({ navigation }) {
   const current = candidates[index];
   const next = candidates[index + 1];
 
+  // 스와이프 방향에 따라 서서히 진해지는 LIKE / NOPE 도장
+  const likeOpacity = position.x.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+  const nopeOpacity = position.x.interpolate({
+    inputRange: [-SWIPE_THRESHOLD, 0],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* 거리 필터 — 평소엔 작은 알약 버튼 하나만, 누르면 슬라이더가 펼쳐짐 (화면 위쪽을 너무 차지하지 않도록) */}
       <View style={styles.filterHeader}>
+        <CookieLogo size={26} />
         <TouchableOpacity
           style={styles.filterPill}
           onPress={() => setFilterOpen((v) => !v)}
         >
-          <Text style={styles.filterPillText}>🍪 {maxDist}km 이내 {filterOpen ? "▲" : "▼"}</Text>
+          <Text style={styles.filterPillText}>📍 {maxDist}km {filterOpen ? "▲" : "▼"}</Text>
         </TouchableOpacity>
       </View>
       {filterOpen && (
@@ -245,6 +260,18 @@ export default function DiscoverScreen({ navigation }) {
               ]}
             >
               <ProfileCard key={current.id} person={current} />
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.stamp, styles.stampLike, { opacity: likeOpacity }]}
+              >
+                <Text style={[styles.stampText, { color: COLORS.primary }]}>LIKE</Text>
+              </Animated.View>
+              <Animated.View
+                pointerEvents="none"
+                style={[styles.stamp, styles.stampNope, { opacity: nopeOpacity }]}
+              >
+                <Text style={[styles.stampText, { color: "#6B5B4D" }]}>NOPE</Text>
+              </Animated.View>
               <TouchableOpacity style={styles.moreButton} onPress={handleReportBlock}>
                 <Text style={styles.moreButtonText}>⋯</Text>
               </TouchableOpacity>
@@ -382,16 +409,25 @@ function ProfileCard({ person }) {
         </View>
       )}
 
-      <View style={styles.infoBox}>
+      <FadeOverlay height={260} />
+      <View style={styles.infoBox} pointerEvents="none">
         <Text style={styles.name}>
-          {person.name}, {person.age}
-          {person.height ? ` · ${person.height}cm` : ""}
+          {person.name}
+          <Text style={styles.age}>  {person.age}</Text>
         </Text>
         {person._distance != null && (
           <Text style={styles.distance}>📍 {person._distance.toFixed(1)}km 거리</Text>
         )}
-        {!!person.job && <Text style={styles.bio}>💼 {person.job}</Text>}
-        {!!person.bio && <Text style={styles.bio}>{person.bio}</Text>}
+        {(!!person.job || !!person.height) && (
+          <Text style={styles.bio}>
+            {[person.job, person.height ? `${person.height}cm` : null].filter(Boolean).join(" · ")}
+          </Text>
+        )}
+        {!!person.bio && (
+          <Text style={styles.bio} numberOfLines={2}>
+            {person.bio}
+          </Text>
+        )}
       </View>
     </>
   );
@@ -401,20 +437,19 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   filterHeader: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 6,
+    paddingBottom: 8,
   },
   filterPill: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
-  filterPillText: { fontSize: 13, fontWeight: "700", color: COLORS.primary },
+  filterPillText: { fontSize: 12, fontWeight: "700", color: COLORS.textLight },
   filterBar: {
     paddingHorizontal: 20,
     paddingBottom: 6,
@@ -438,18 +473,31 @@ const styles = StyleSheet.create({
   deck: { flex: 1, alignItems: "center", justifyContent: "center" },
   card: {
     position: "absolute",
-    width: width * 0.88,
-    height: "78%",
-    borderRadius: 20,
-    backgroundColor: COLORS.card,
+    width: width - 20,
+    top: 0,
+    bottom: 4,
+    borderRadius: 24,
+    backgroundColor: COLORS.surface,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowColor: "#2B1D14",
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 6,
   },
-  cardBehind: { top: 10, transform: [{ scale: 0.96 }] },
+  cardBehind: { transform: [{ scale: 0.95 }] },
+  stamp: {
+    position: "absolute",
+    top: 48,
+    borderWidth: 4,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  stampLike: { left: 24, borderColor: COLORS.primary, transform: [{ rotate: "-14deg" }] },
+  stampNope: { right: 24, borderColor: "#6B5B4D", transform: [{ rotate: "14deg" }] },
+  stampText: { fontSize: 36, fontWeight: "900", letterSpacing: 2 },
   moreButton: {
     position: "absolute",
     top: 14,
@@ -493,35 +541,37 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 18,
-    backgroundColor: "rgba(59,38,22,0.55)",
+    paddingHorizontal: 20,
+    paddingBottom: 22,
   },
-  name: { color: "#fff", fontSize: 22, fontWeight: "800" },
-  distance: { color: "#fff", marginTop: 2, fontSize: 13, fontWeight: "600" },
-  bio: { color: "#fff", marginTop: 4, fontSize: 14 },
+  name: { color: "#fff", fontSize: 30, fontWeight: "800" },
+  age: { fontSize: 26, fontWeight: "400" },
+  distance: { color: "rgba(255,255,255,0.9)", marginTop: 2, fontSize: 14, fontWeight: "600" },
+  bio: { color: "rgba(255,255,255,0.92)", marginTop: 4, fontSize: 15 },
   actions: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 28,
-    paddingBottom: 28,
-    paddingTop: 8,
+    gap: 36,
+    paddingBottom: 14,
+    paddingTop: 10,
   },
   actionButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    backgroundColor: COLORS.card,
+    shadowColor: "#2B1D14",
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  passButton: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border },
-  likeButton: { backgroundColor: COLORS.primary },
-  actionIcon: { fontSize: 26, color: COLORS.textLight },
-  likeIcon: { color: "#fff" },
+  passButton: { borderWidth: 2, borderColor: "#6B5B4D" },
+  likeButton: { borderWidth: 2, borderColor: COLORS.primary },
+  actionIcon: { fontSize: 28, fontWeight: "800", color: "#6B5B4D" },
+  likeIcon: { color: COLORS.primary },
 
   matchOverlay: {
     position: "absolute",
@@ -529,7 +579,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#F5C64B",
+    backgroundColor: COLORS.primary,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
@@ -537,24 +587,24 @@ const styles = StyleSheet.create({
   },
   confettiEmoji: { position: "absolute" },
   cookieTitle: {
-    color: "#111111",
+    color: "#FFFFFF",
     fontSize: 46,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 6,
-    textShadowColor: "rgba(255,255,255,0.6)",
+    textShadowColor: "rgba(74,44,23,0.55)",
     textShadowOffset: { width: 2, height: 2 },
     textShadowRadius: 0,
   },
   matchSubtitle: {
-    color: "#3a2f14",
+    color: "#FFFFFF",
     fontSize: 15,
     marginBottom: 6,
     textAlign: "center",
     fontWeight: "600",
   },
   matchDistance: {
-    color: "#5c4a1a",
+    color: "rgba(255,255,255,0.9)",
     fontSize: 13,
     fontWeight: "700",
     marginBottom: 20,
@@ -569,7 +619,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: "#111111",
+    borderColor: "#FFFFFF",
   },
   matchCookieBadge: {
     width: 48,
@@ -577,7 +627,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: "#fff",
     borderWidth: 3,
-    borderColor: "#111111",
+    borderColor: COLORS.primary,
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: -16,
@@ -585,13 +635,13 @@ const styles = StyleSheet.create({
   },
   matchCookieText: { fontSize: 22 },
   matchChatButton: {
-    backgroundColor: "#111111",
+    backgroundColor: "#FFFFFF",
     borderRadius: 28,
     paddingVertical: 16,
     paddingHorizontal: 40,
     marginBottom: 14,
   },
-  matchChatButtonText: { color: "#F5C64B", fontWeight: "800", fontSize: 16 },
+  matchChatButtonText: { color: COLORS.primary, fontWeight: "800", fontSize: 16 },
   matchLaterButton: { paddingVertical: 8 },
-  matchLaterButtonText: { color: "#999", fontSize: 14 },
+  matchLaterButtonText: { color: "rgba(255,255,255,0.85)", fontSize: 14 },
 });

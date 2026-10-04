@@ -11,6 +11,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { friendlyError } from "./LoginScreen";
 import { COLORS, FONTS } from "../theme";
+import CookieLogo from "../components/CookieLogo";
 
 const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
@@ -55,7 +56,7 @@ export default function SignupScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Text style={styles.logo}>🍪 Cookie</Text>
+      <CookieLogo size={44} style={styles.logoRow} />
       <Text style={styles.subtitle}>새 계정 만들기</Text>
 
       <TextInput
@@ -113,6 +114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     backgroundColor: COLORS.bg,
   },
+  logoRow: { alignSelf: "center", marginBottom: 6 },
   logo: {
     fontSize: 36,
     color: COLORS.primary,

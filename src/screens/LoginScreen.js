@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { COLORS, FONTS } from "../theme";
+import CookieLogo from "../components/CookieLogo";
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -39,7 +40,7 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Text style={styles.logo}>🍪 Cookie</Text>
+      <CookieLogo size={44} style={styles.logoRow} />
       <Text style={styles.subtitle}>다시 만나서 반가워요</Text>
 
       <TextInput
@@ -99,6 +100,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     backgroundColor: COLORS.bg,
   },
+  logoRow: { alignSelf: "center", marginBottom: 6 },
   logo: {
     fontSize: 36,
     color: COLORS.primary,

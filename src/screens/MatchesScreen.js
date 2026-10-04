@@ -38,7 +38,9 @@ export default function MatchesScreen({ navigation }) {
       async (snap) => {
         const rows = await Promise.all(
           snap.docs
-            .filter((d) => !(d.data().blockedBy || []).length) // 나 또는 상대가 차단했으면 목록에서 숨김
+            .filter(
+              (d) => !(d.data().blockedBy || []).length && !(d.data().unmatchedBy || []).length
+            ) // 차단했거나 매칭을 끊었으면(내가 하든 상대가 하든) 목록에서 숨김
             .map(async (d) => {
               const data = d.data();
               const otherUid = data.users.find((u) => u !== user.uid);

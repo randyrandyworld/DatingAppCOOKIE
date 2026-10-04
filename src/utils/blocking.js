@@ -12,6 +12,9 @@ import {
 import { db } from "../firebase";
 import { getMatchId } from "./matching";
 
+// 서로 다른 사용자 N명에게 신고가 쌓이면 다른 사람들의 카드 목록에서 자동으로 숨김
+export const REPORT_HIDE_THRESHOLD = 3;
+
 const REPORT_REASONS = ["부적절한 사진", "불쾌한 메시지/행동", "가짜 프로필", "기타"];
 
 // 내가 차단한 유저 uid 목록 가져오기
@@ -42,12 +45,54 @@ export async function reportUser(myUid, targetUid, reason) {
     reason,
     createdAt: serverTimestamp(),
   });
+
+  // 신고 누적 카운트: 대상 유저 문서의 reportedBy 배열에 내 uid를 추가 (한 사람이 여러 번 해도 1명으로 셈)
+  // 이미 신고한 적이 있으면 규칙에서 막히는데, 그건 정상이라 무시한다.
+  try {
+    await updateDoc(doc(db, "users", targetUid), { reportedBy: arrayUnion(myUid) });
+  } catch (e) {
+    // 무시
+  }
+}
+
+// 매칭 끊기 — 차단과 달리 신고/차단 기록은 남기지 않고, 두 사람 모두에게 채팅이 사라진다.
+export async function unmatchUser(myUid, targetUid) {
+  await updateDoc(doc(db, "matches", getMatchId(myUid, targetUid)), {
+    unmatchedBy: arrayUnion(myUid),
+  });
 }
 
 // 프로필/채팅에서 "···" 버튼을 눌렀을 때 쓰는 공용 액션시트
-export function showReportBlockMenu(myUid, target, { onBlocked, onReported } = {}) {
+export function showReportBlockMenu(
+  myUid,
+  target,
+  { onBlocked, onReported, onUnmatched, allowUnmatch = false } = {}
+) {
   Alert.alert(`${target.name}님`, "신고하거나 차단할 수 있어요", [
     { text: "취소", style: "cancel" },
+    ...(allowUnmatch
+      ? [
+          {
+            text: "매칭 끊기",
+            onPress: () =>
+              Alert.alert("매칭을 끊을까요?", "대화방이 두 사람 모두에게서 사라지고 되돌릴 수 없어요.", [
+                { text: "취소", style: "cancel" },
+                {
+                  text: "끊기",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      await unmatchUser(myUid, target.id);
+                      onUnmatched?.();
+                    } catch (e) {
+                      Alert.alert("오류", e?.message || "다시 시도해주세요.");
+                    }
+                  },
+                },
+              ]),
+          },
+        ]
+      : []),
     {
       text: "차단하기",
       style: "destructive",

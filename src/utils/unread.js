@@ -36,7 +36,7 @@ export function useUnreadMatchesCount(uid) {
       let c = 0;
       snap.forEach((d) => {
         const data = d.data();
-        if ((data.blockedBy || []).length) return;
+        if ((data.blockedBy || []).length || (data.unmatchedBy || []).length) return;
         if (isMatchUnread(data, uid)) c++;
       });
       setCount(c);

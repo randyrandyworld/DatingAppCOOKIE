@@ -32,6 +32,7 @@ export default function ChatScreen({ route, navigation }) {
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+  const [closed, setClosed] = useState(false); // 차단/매칭 끊김 상태면 더 이상 메시지를 보낼 수 없음
   const listRef = useRef(null);
 
   useLayoutEffect(() => {
@@ -58,6 +59,8 @@ export default function ChatScreen({ route, navigation }) {
   const onReportBlock = () => {
     if (!otherUser) return;
     showReportBlockMenu(user.uid, otherUser, {
+      allowUnmatch: true,
+      onUnmatched: () => navigation.goBack(),
       onBlocked: () => navigation.goBack(),
       onReported: () => navigation.goBack(),
     });
@@ -74,6 +77,15 @@ export default function ChatScreen({ route, navigation }) {
     return unsub;
   }, [matchId]);
 
+  // 매칭 문서를 구독해서 상대/내가 매칭을 끊거나 차단하면 입력창을 막는다
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "matches", matchId), (snap) => {
+      const d = snap.data() || {};
+      setClosed(!!(d.blockedBy || []).length || !!(d.unmatchedBy || []).length);
+    });
+    return unsub;
+  }, [matchId]);
+
   // 채팅방에 들어오면 "읽음" 처리 — 매칭 탭 빨간 뱃지가 사라짐
   useEffect(() => {
     if (matchId && user?.uid) {
@@ -83,7 +95,7 @@ export default function ChatScreen({ route, navigation }) {
 
   const send = async () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || closed) return;
     setText("");
     await addDoc(collection(db, "matches", matchId, "messages"), {
       senderId: user.uid,
@@ -134,6 +146,11 @@ export default function ChatScreen({ route, navigation }) {
         }}
       />
 
+      {closed ? (
+        <View style={styles.closedBar}>
+          <Text style={styles.closedText}>매칭이 종료된 대화예요. 더 이상 메시지를 보낼 수 없어요.</Text>
+        </View>
+      ) : (
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
@@ -146,6 +163,7 @@ export default function ChatScreen({ route, navigation }) {
           <Text style={styles.sendButtonText}>전송</Text>
         </TouchableOpacity>
       </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -193,4 +211,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   sendButtonText: { color: "#fff", fontWeight: "700" },
+  closedBar: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+  },
+  closedText: { color: COLORS.textLight },
 });

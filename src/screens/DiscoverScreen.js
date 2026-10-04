@@ -18,7 +18,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { recordSwipeAndCheckMatch } from "../utils/matching";
-import { getBlockedIds, showReportBlockMenu } from "../utils/blocking";
+import { getBlockedIds, showReportBlockMenu, REPORT_HIDE_THRESHOLD } from "../utils/blocking";
 import { distanceKm } from "../utils/distance";
 import { isAdminUid } from "../adminConfig";
 import { COLORS, FONTS } from "../theme";
@@ -61,7 +61,8 @@ export default function DiscoverScreen({ navigation }) {
             u.id !== user.uid && !swipedIds.has(u.id) && !blockedIds.has(u.id)
         )
         .filter((u) => !profile?.seekingGender || u.gender === profile.seekingGender)
-        .filter((u) => !u.isDummy || isAdminUid(user.uid));
+        .filter((u) => !u.isDummy || isAdminUid(user.uid))
+        .filter((u) => (u.reportedBy?.length || 0) < REPORT_HIDE_THRESHOLD);
 
       setRawList(list);
       setIndex(0);

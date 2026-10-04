@@ -17,6 +17,7 @@ import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import cloudinaryConfig from "../cloudinaryConfig";
+import { COLORS, FONTS } from "../theme";
 
 const GENDERS = ["남성", "여성", "기타"];
 const SEEKING = ["남성", "여성"];
@@ -303,33 +304,34 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, paddingBottom: 60, backgroundColor: "#fff" },
-  title: { fontSize: 24, fontWeight: "800", marginBottom: 6 },
-  subtitle: { color: "#888", marginBottom: 24, lineHeight: 20 },
-  label: { fontWeight: "700", marginBottom: 8, marginTop: 16, fontSize: 14 },
-  hint: { color: "#aaa", fontSize: 12, marginTop: 4 },
+  container: { padding: 24, paddingBottom: 60, backgroundColor: COLORS.bg },
+  title: { fontSize: 24, fontWeight: "800", marginBottom: 6, color: COLORS.text, fontFamily: FONTS.heading },
+  subtitle: { color: COLORS.textLight, marginBottom: 24, lineHeight: 20 },
+  label: { fontWeight: "700", marginBottom: 8, marginTop: 16, fontSize: 14, color: COLORS.text },
+  hint: { color: COLORS.textLight, fontSize: 12, marginTop: 4 },
   photoRow: { flexDirection: "row", gap: 10 },
   photoSlot: {
     width: 96,
     height: 128,
     borderRadius: 12,
-    backgroundColor: "#f2f2f2",
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderColor: COLORS.border,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   photoImg: { width: "100%", height: "100%" },
-  photoPlus: { fontSize: 28, color: "#bbb" },
+  photoPlus: { fontSize: 28, color: COLORS.accent },
   input: {
     borderWidth: 1,
-    borderColor: "#e5e5e5",
+    borderColor: COLORS.border,
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    backgroundColor: "#fafafa",
+    backgroundColor: COLORS.card,
+    color: COLORS.text,
   },
   bioInput: { minHeight: 90, textAlignVertical: "top" },
   genderRow: { flexDirection: "row", gap: 10 },
@@ -338,16 +340,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    backgroundColor: "#fafafa",
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
   },
-  genderChipActive: { backgroundColor: "#111111", borderColor: "#111111" },
-  genderChipText: { color: "#555", fontWeight: "600" },
+  genderChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  genderChipText: { color: COLORS.textLight, fontWeight: "600" },
   genderChipTextActive: { color: "#fff" },
-  error: { color: "#d33", marginTop: 16, fontSize: 14, textAlign: "center" },
+  error: { color: COLORS.danger, marginTop: 16, fontSize: 14, textAlign: "center" },
   ok: { color: "#1a8f3c", marginTop: 16, fontSize: 14, textAlign: "center" },
   saveButton: {
-    backgroundColor: "#111111",
+    backgroundColor: COLORS.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
@@ -355,5 +357,5 @@ const styles = StyleSheet.create({
   },
   saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   logoutButton: { alignItems: "center", marginTop: 20 },
-  logoutButtonText: { color: "#999" },
+  logoutButtonText: { color: COLORS.textLight },
 });

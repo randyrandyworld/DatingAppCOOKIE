@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import DiscoverScreen from "../screens/DiscoverScreen";
 import MatchesScreen from "../screens/MatchesScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
+import AdminScreen from "../screens/AdminScreen";
+import { isAdminUid } from "../adminConfig";
 import { useAuth } from "../context/AuthContext";
 import { useUnreadMatchesCount } from "../utils/unread";
 import { COLORS, FONTS } from "../theme";
@@ -102,6 +104,25 @@ export default function MainTabs() {
       >
         {(props) => <ProfileFormScreen {...props} mode="edit" />}
       </Tab.Screen>
+      {isAdminUid(user?.uid) && (
+        <Tab.Screen
+          name="Admin"
+          component={AdminScreen}
+          options={{
+            headerShown: true,
+            headerTitle: "관리자 모드",
+            headerTitleStyle: { fontWeight: "800" },
+            headerStyle: { shadowOpacity: 0, elevation: 0 },
+            tabBarIcon: ({ focused, size }) => (
+              <Ionicons
+                name={focused ? "construct" : "construct-outline"}
+                size={size ?? 26}
+                color="#111111"
+              />
+            ),
+          }}
+        />
+      )}
     </Tab.Navigator>
   );
 }

@@ -20,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 import { recordSwipeAndCheckMatch } from "../utils/matching";
 import { getBlockedIds, showReportBlockMenu } from "../utils/blocking";
 import { distanceKm } from "../utils/distance";
+import { isAdminUid } from "../adminConfig";
 import { COLORS, FONTS } from "../theme";
 
 const { width } = Dimensions.get("window");
@@ -59,7 +60,8 @@ export default function DiscoverScreen({ navigation }) {
           (u) =>
             u.id !== user.uid && !swipedIds.has(u.id) && !blockedIds.has(u.id)
         )
-        .filter((u) => !profile?.seekingGender || u.gender === profile.seekingGender);
+        .filter((u) => !profile?.seekingGender || u.gender === profile.seekingGender)
+        .filter((u) => !u.isDummy || isAdminUid(user.uid));
 
       setRawList(list);
       setIndex(0);
@@ -277,7 +279,7 @@ export default function DiscoverScreen({ navigation }) {
   );
 }
 
-function CookieMatchOverlay({ matchInfo, profile, onChat, onLater }) {
+export function CookieMatchOverlay({ matchInfo, profile, onChat, onLater }) {
   const bounce = useRef(new Animated.Value(0)).current;
   const pop = useRef(new Animated.Value(0.5)).current;
 

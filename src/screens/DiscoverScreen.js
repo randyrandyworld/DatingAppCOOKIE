@@ -268,16 +268,17 @@ export default function DiscoverScreen({ navigation }) {
                 pointerEvents="none"
                 style={[styles.stamp, styles.stampLike, { opacity: likeOpacity }]}
               >
-                <Text style={[styles.stampText, { color: COLORS.accent }]}>LIKE</Text>
+                <CookieMark size={34} />
+                <Text style={[styles.stampText, { color: COLORS.accent }]}>YUM!</Text>
               </Animated.View>
               <Animated.View
                 pointerEvents="none"
                 style={[styles.stamp, styles.stampNope, { opacity: nopeOpacity }]}
               >
-                <Text style={[styles.stampText, { color: "#6B5B4D" }]}>NOPE</Text>
+                <Text style={[styles.stampText, { color: "#6B5B4D" }]}>PASS</Text>
               </Animated.View>
               <TouchableOpacity style={styles.moreButton} onPress={handleReportBlock}>
-                <Text style={styles.moreButtonText}>⋯</Text>
+                <Ionicons name="ellipsis-horizontal" size={20} color="#fff" />
               </TouchableOpacity>
             </Animated.View>
           </View>
@@ -340,16 +341,12 @@ export function CookieMatchOverlay({ matchInfo, profile, onChat, onLater }) {
     ).start();
   }, []);
 
-  // 처음 만들었던 느낌 그대로, 화면 곳곳에 흩뿌려진 쿠키 컨페티
-  const confettiPositions = [
-    { top: "7%", left: "10%", size: 40, rotate: "-15deg", opacity: 0.9 },
-    { top: "12%", left: "76%", size: 28, rotate: "18deg", opacity: 0.55 },
-    { top: "24%", left: "40%", size: 18, rotate: "5deg", opacity: 0.45 },
-    { top: "20%", left: "62%", size: 22, rotate: "-8deg", opacity: 0.7 },
-    { top: "76%", left: "12%", size: 30, rotate: "12deg", opacity: 0.6 },
-    { top: "84%", left: "70%", size: 38, rotate: "-10deg", opacity: 0.9 },
-    { top: "68%", left: "84%", size: 20, rotate: "6deg", opacity: 0.5 },
-    { top: "90%", left: "40%", size: 18, rotate: "-20deg", opacity: 0.45 },
+  // 우리만의 가미: 화면 구석에 살짝 놓인 쿠키 마크 (과하지 않게)
+  const accents = [
+    { top: "9%", left: "8%", size: 34, rotate: "-16deg", opacity: 0.35 },
+    { top: "16%", left: "82%", size: 22, rotate: "14deg", opacity: 0.3 },
+    { top: "86%", left: "84%", size: 36, rotate: "-12deg", opacity: 0.3 },
+    { top: "82%", left: "6%", size: 20, rotate: "10deg", opacity: 0.3 },
   ];
 
   return (
@@ -359,7 +356,7 @@ export function CookieMatchOverlay({ matchInfo, profile, onChat, onLater }) {
       end={{ x: 0.7, y: 1 }}
       style={styles.matchOverlay}
     >
-      {confettiPositions.map((c, i) => (
+      {accents.map((c, i) => (
         <View
           key={i}
           pointerEvents="none"
@@ -372,27 +369,36 @@ export function CookieMatchOverlay({ matchInfo, profile, onChat, onLater }) {
         </View>
       ))}
 
-      <Animated.Text style={[styles.cookieTitle, { transform: [{ translateY: bounce }] }]}>
+      <Animated.Text style={[styles.cookieTitle, { transform: [{ translateY: bounce }, { rotate: "-6deg" }] }]}>
         COOKIE!
       </Animated.Text>
       <Text style={styles.matchSubtitle}>
         {matchInfo.otherUser?.name}님과 서로 좋아요를 눌렀어요
       </Text>
       {matchInfo.otherUser?._distance != null && (
-        <Text style={styles.matchDistance}>
-          나와 {matchInfo.otherUser._distance.toFixed(1)}km 거리
-        </Text>
+        <View style={styles.matchDistanceRow}>
+          <Ionicons name="location-outline" size={15} color="rgba(255,255,255,0.9)" />
+          <Text style={styles.matchDistance}>
+            나와 {matchInfo.otherUser._distance.toFixed(1)}km 거리
+          </Text>
+        </View>
       )}
 
       <Animated.View style={[styles.matchPhotos, { transform: [{ scale: pop }] }]}>
-        <Image source={{ uri: profile?.photos?.[0] }} style={styles.matchPhoto} />
+        <Image
+          source={{ uri: profile?.photos?.[0] }}
+          style={[styles.matchPhoto, styles.matchPhotoLeft]}
+        />
+        <Image
+          source={{ uri: matchInfo.otherUser?.photos?.[0] }}
+          style={[styles.matchPhoto, styles.matchPhotoRight]}
+        />
         <View style={styles.matchCookieBadge}>
-          <CookieMark size={34} />
+          <CookieMark size={40} />
         </View>
-        <Image source={{ uri: matchInfo.otherUser?.photos?.[0] }} style={styles.matchPhoto} />
       </Animated.View>
 
-      <TouchableOpacity style={styles.matchChatButton} onPress={onChat}>
+      <TouchableOpacity style={styles.matchChatButton} onPress={onChat} activeOpacity={0.85}>
         <Text style={styles.matchChatButtonText}>대화 시작하기</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.matchLaterButton} onPress={onLater}>
@@ -524,6 +530,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 2,
     backgroundColor: "rgba(255,255,255,0.15)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   stampLike: { left: 24, borderColor: COLORS.accent, transform: [{ rotate: "-14deg" }] },
   stampNope: { right: 24, borderColor: "#6B5B4D", transform: [{ rotate: "14deg" }] },
@@ -633,65 +642,75 @@ const styles = StyleSheet.create({
   confettiEmoji: { position: "absolute" },
   cookieTitle: {
     color: "#FFFFFF",
-    fontSize: 58,
+    fontSize: 66,
     fontFamily: FONTS.logo,
     letterSpacing: -1,
     marginBottom: 8,
-    textShadowColor: "rgba(120,40,10,0.35)",
-    textShadowOffset: { width: 0, height: 5 },
+    textShadowColor: "rgba(120,40,10,0.28)",
+    textShadowOffset: { width: 0, height: 6 },
     textShadowRadius: 0,
   },
   matchSubtitle: {
     color: "#FFFFFF",
-    fontSize: 15,
-    marginBottom: 6,
+    fontSize: 16,
+    marginTop: 6,
     textAlign: "center",
-    fontWeight: "600",
+    fontFamily: FONTS.bold,
   },
+  matchDistanceRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 8 },
   matchDistance: {
     color: "rgba(255,255,255,0.9)",
     fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 20,
+    fontFamily: FONTS.bold,
   },
   matchPhotos: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  matchPhoto: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
-    borderColor: "#FFFFFF",
-  },
-  matchCookieBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#fff",
-    borderWidth: 3,
-    borderColor: COLORS.primary,
+    width: 260,
+    height: 190,
+    marginTop: 36,
+    marginBottom: 48,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: -16,
-    zIndex: 1,
   },
-  matchCookieText: { fontSize: 22 },
-  matchChatButton: {
-    backgroundColor: COLORS.primaryDark,
-    borderRadius: 30,
-    paddingVertical: 17,
-    paddingHorizontal: 46,
-    marginBottom: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
+  matchPhoto: {
+    position: "absolute",
+    width: 134,
+    height: 178,
+    borderRadius: 22,
+    borderWidth: 5,
+    borderColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.3)",
+    shadowColor: "#5A1E05",
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  matchPhotoLeft: { left: 0, transform: [{ rotate: "-8deg" }] },
+  matchPhotoRight: { right: 0, transform: [{ rotate: "8deg" }] },
+  matchCookieBadge: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#5A1E05",
+    shadowOpacity: 0.3,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  matchChatButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 32,
+    paddingVertical: 17,
+    paddingHorizontal: 54,
+    shadowColor: "#5A1E05",
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 5,
   },
-  matchChatButtonText: { color: COLORS.accent, fontFamily: FONTS.heading, fontSize: 17 },
-  matchLaterButton: { paddingVertical: 8 },
-  matchLaterButtonText: { color: "rgba(255,255,255,0.85)", fontSize: 14 },
+  matchChatButtonText: { color: COLORS.primary, fontFamily: FONTS.heading, fontSize: 18 },
+  matchLaterButton: { paddingVertical: 12, marginTop: 8 },
+  matchLaterButtonText: { color: "rgba(255,255,255,0.9)", fontSize: 14, fontFamily: FONTS.bold },
 });

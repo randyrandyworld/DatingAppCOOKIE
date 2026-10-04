@@ -5,6 +5,7 @@ import {
   Animated,
   Dimensions,
   Image,
+  Modal,
   PanResponder,
   Pressable,
   StyleSheet,
@@ -21,6 +22,7 @@ import { useAuth } from "../context/AuthContext";
 import { recordSwipeAndCheckMatch } from "../utils/matching";
 import { getBlockedIds, showReportBlockMenu, REPORT_HIDE_THRESHOLD } from "../utils/blocking";
 import { distanceKm } from "../utils/distance";
+import { tryUseLike, DAILY_LIKE_LIMIT } from "../utils/dailyLikes";
 import { isAdminUid } from "../adminConfig";
 import CookieLogo from "../components/CookieLogo";
 import FadeOverlay from "../components/FadeOverlay";
@@ -45,6 +47,9 @@ export default function DiscoverScreen({ navigation }) {
 
   // 매칭 연출용 상태
   const [matchInfo, setMatchInfo] = useState(null); // { matchId, otherUser } or null
+
+  // 하루 좋아요 한도 초과 안내 모달
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
 
   const position = useRef(new Animated.ValueXY()).current;
 
@@ -123,8 +128,19 @@ export default function DiscoverScreen({ navigation }) {
     [candidates, index, busy]
   );
 
-  const forceSwipe = (direction) => {
+  const forceSwipe = async (direction) => {
     if (busy) return;
+
+    // 좋아요(오른쪽)일 때만 하루 한도 체크 — 패스는 무제한
+    if (direction === "right") {
+      const ok = await tryUseLike(user.uid);
+      if (!ok) {
+        setLimitModalOpen(true);
+        resetPosition(); // 카드는 제자리로, 이 사람은 그대로 남겨둠 (스킵 안 됨)
+        return;
+      }
+    }
+
     Animated.timing(position, {
       toValue: { x: direction === "right" ? width * 1.5 : -width * 1.5, y: 0 },
       duration: 220,
@@ -344,6 +360,43 @@ export default function DiscoverScreen({ navigation }) {
           onLater={keepSwiping}
         />
       )}
+
+      <Modal
+        visible={limitModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLimitModalOpen(false)}
+      >
+        <View style={styles.limitBackdrop}>
+          <View style={styles.limitCard}>
+            <Text style={styles.limitEmoji}>🍪</Text>
+            <Text style={styles.limitTitle}>앗, 오늘의 좋아요를 다 썼어요!</Text>
+            <Text style={styles.limitBody}>
+              더 많은 사람들과 만나고 싶다면{"\n"}무제한 좋아요는 어떠세요?
+            </Text>
+            <Text style={styles.limitHint}>
+              내일 오전 0시에 다시 {DAILY_LIKE_LIMIT}개가 채워져요
+            </Text>
+
+            <TouchableOpacity
+              style={styles.limitUpgradeButton}
+              onPress={() => {
+                setLimitModalOpen(false);
+                // TODO: 결제 방식(구독/쿠키) 정해지면 여기 연결
+              }}
+            >
+              <Text style={styles.limitUpgradeText}>무제한으로 만나보기</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.limitCloseButton}
+              onPress={() => setLimitModalOpen(false)}
+            >
+              <Text style={styles.limitCloseText}>나중에 할게요</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -738,4 +791,50 @@ const styles = StyleSheet.create({
   matchChatButtonText: { color: COLORS.accent, fontFamily: FONTS.heading, fontSize: 17 },
   matchLaterButton: { paddingVertical: 8 },
   matchLaterButtonText: { color: "rgba(255,255,255,0.85)", fontSize: 14 },
+
+  limitBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+  },
+  limitCard: {
+    width: "100%",
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    padding: 28,
+    alignItems: "center",
+  },
+  limitEmoji: { fontSize: 44, marginBottom: 10 },
+  limitTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: COLORS.text,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  limitBody: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  limitHint: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginBottom: 22,
+  },
+  limitUpgradeButton: {
+    width: "100%",
+    backgroundColor: COLORS.primary,
+    borderRadius: 24,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  limitUpgradeText: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  limitCloseButton: { paddingVertical: 6 },
+  limitCloseText: { color: COLORS.textLight, fontSize: 13 },
 });

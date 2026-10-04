@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -36,7 +37,9 @@ export default function DiscoverScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [rawList, setRawList] = useState([]); // 필터 전 원본
   const [maxDist, setMaxDist] = useState(50); // 거리 설정 (기본 50km)
-  const [filterOpen, setFilterOpen] = useState(false); // 거리 슬라이더를 눌렀을 때만 펼쳐지도록
+  const [minAge, setMinAge] = useState("20"); // 나이 범위 (문자열로 들고있다가 숫자 변환)
+  const [maxAge, setMaxAge] = useState("45");
+  const [filterOpen, setFilterOpen] = useState(false); // 거리/나이 필터를 눌렀을 때만 펼쳐지도록
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
 
@@ -80,6 +83,8 @@ export default function DiscoverScreen({ navigation }) {
 
   const candidates = useMemo(() => {
     const myLoc = profile?.location;
+    const minA = Number(minAge) || 0;
+    const maxA = Number(maxAge) || 999;
     return rawList
       .map((u) => {
         let d = null;
@@ -88,12 +93,13 @@ export default function DiscoverScreen({ navigation }) {
         }
         return { ...u, _distance: d };
       })
-      .filter((u) => u._distance == null || u._distance <= maxDist);
-  }, [rawList, maxDist, profile?.location]);
+      .filter((u) => u._distance == null || u._distance <= maxDist)
+      .filter((u) => !u.age || (u.age >= minA && u.age <= maxA));
+  }, [rawList, maxDist, minAge, maxAge, profile?.location]);
 
   useEffect(() => {
     setIndex(0);
-  }, [maxDist]);
+  }, [maxDist, minAge, maxAge]);
 
   const panResponder = useMemo(
     () =>
@@ -203,19 +209,19 @@ export default function DiscoverScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* 거리 필터 — 평소엔 작은 알약 버튼 하나만, 누르면 슬라이더가 펼쳐짐 (화면 위쪽을 너무 차지하지 않도록) */}
+      {/* 거리/나이 필터 — 평소엔 작은 알약 버튼 하나만, 누르면 패널이 펼쳐짐 */}
       <View style={styles.filterHeader}>
         <CookieLogo size={26} />
         <TouchableOpacity
           style={styles.filterPill}
           onPress={() => setFilterOpen((v) => !v)}
         >
-          <Ionicons name="options-outline" size={15} color={COLORS.textLight} />
-          <Text style={styles.filterPillText}>{maxDist}km</Text>
+          <Text style={styles.filterPillText}>🍪 {maxDist}km 이내 {filterOpen ? "▲" : "▼"}</Text>
         </TouchableOpacity>
       </View>
       {filterOpen && (
         <View style={styles.filterBar}>
+          <Text style={styles.filterLabel}>거리 {maxDist}km 이내</Text>
           <Slider
             style={{ width: "100%", height: 36 }}
             minimumValue={1}
@@ -227,6 +233,28 @@ export default function DiscoverScreen({ navigation }) {
             maximumTrackTintColor={COLORS.border}
             thumbTintColor={COLORS.primary}
           />
+
+          <Text style={[styles.filterLabel, { marginTop: 10 }]}>나이 범위</Text>
+          <View style={styles.ageRow}>
+            <TextInput
+              style={styles.ageInput}
+              value={minAge}
+              onChangeText={setMinAge}
+              keyboardType="number-pad"
+              placeholder="최소"
+              maxLength={2}
+            />
+            <Text style={styles.ageDash}>～</Text>
+            <TextInput
+              style={styles.ageInput}
+              value={maxAge}
+              onChangeText={setMaxAge}
+              keyboardType="number-pad"
+              placeholder="최대"
+              maxLength={2}
+            />
+            <Text style={styles.ageUnit}>세</Text>
+          </View>
         </View>
       )}
 
@@ -237,7 +265,7 @@ export default function DiscoverScreen({ navigation }) {
       ) : !current ? (
         <View style={styles.center}>
           <Text style={styles.emptyTitle}>보여줄 카드가 없어요</Text>
-          <Text style={styles.emptySubtitle}>거리를 넓히거나 잠시 후 다시 확인해보세요</Text>
+          <Text style={styles.emptySubtitle}>거리나 나이 범위를 넓혀보세요</Text>
           <TouchableOpacity style={styles.refreshButton} onPress={loadCandidates}>
             <Text style={styles.refreshButtonText}>새로고침</Text>
           </TouchableOpacity>
@@ -482,8 +510,24 @@ const styles = StyleSheet.create({
   filterPillText: { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.textLight },
   filterBar: {
     paddingHorizontal: 20,
-    paddingBottom: 6,
+    paddingBottom: 10,
   },
+  filterLabel: { fontSize: 12, fontWeight: "700", color: COLORS.textLight },
+  ageRow: { flexDirection: "row", alignItems: "center", marginTop: 6, gap: 8 },
+  ageInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    width: 60,
+    textAlign: "center",
+    backgroundColor: COLORS.card,
+    color: COLORS.text,
+    fontWeight: "700",
+  },
+  ageDash: { color: COLORS.textLight },
+  ageUnit: { color: COLORS.textLight, fontSize: 13 },
   center: {
     flex: 1,
     alignItems: "center",

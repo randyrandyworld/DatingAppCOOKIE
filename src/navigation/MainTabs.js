@@ -1,5 +1,5 @@
 import React from "react";
-import { Image, Platform, Text, View } from "react-native";
+import { Image, Platform, View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import DiscoverScreen from "../screens/DiscoverScreen";
@@ -7,6 +7,7 @@ import MatchesScreen from "../screens/MatchesScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
 import AdminScreen from "../screens/AdminScreen";
 import { isAdminUid } from "../adminConfig";
+import CookieMark from "../components/CookieMark";
 import { useAuth } from "../context/AuthContext";
 import { useUnreadMatchesCount } from "../utils/unread";
 import { COLORS, FONTS } from "../theme";
@@ -22,8 +23,8 @@ export default function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: false, // 인스타처럼 텍스트 라벨 없이 아이콘만
-        tabBarActiveTintColor: COLORS.text,
-        tabBarInactiveTintColor: COLORS.textLight,
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.inactive,
         tabBarStyle: {
           height: Platform.OS === "ios" ? 84 : 60,
           paddingTop: 10,
@@ -39,7 +40,7 @@ export default function MainTabs() {
         component={DiscoverScreen}
         options={{
           tabBarIcon: ({ focused, size }) => (
-            <Text style={{ fontSize: (size ?? 26) + 2, opacity: focused ? 1 : 0.35 }}>🍪</Text>
+            <CookieMark size={(size ?? 26) + 4} variant={focused ? "color" : "gray"} />
           ),
         }}
       />
@@ -56,7 +57,7 @@ export default function MainTabs() {
               <Ionicons
                 name={focused ? "paper-plane" : "paper-plane-outline"}
                 size={size ?? 26}
-                color={focused ? COLORS.text : COLORS.textLight}
+                color={focused ? COLORS.primary : COLORS.inactive}
               />
               {unreadCount > 0 && <View style={{ position: "absolute", top: -2, right: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: COLORS.primary, borderWidth: 1.5, borderColor: "#fff" }} />}
             </View>
@@ -92,7 +93,7 @@ export default function MainTabs() {
               <Ionicons
                 name={focused ? "person-circle" : "person-circle-outline"}
                 size={size ?? 26}
-                color={focused ? COLORS.text : COLORS.textLight}
+                color={focused ? COLORS.primary : COLORS.inactive}
               />
             );
           },
@@ -113,7 +114,7 @@ export default function MainTabs() {
               <Ionicons
                 name={focused ? "construct" : "construct-outline"}
                 size={size ?? 26}
-                color={focused ? COLORS.text : COLORS.textLight}
+                color={focused ? COLORS.primary : COLORS.inactive}
               />
             ),
           }}

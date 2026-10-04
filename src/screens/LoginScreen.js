@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { COLORS, FONTS } from "../theme";
 import CookieLogo from "../components/CookieLogo";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
@@ -36,11 +37,12 @@ export default function LoginScreen({ navigation }) {
   };
 
   return (
+    <LinearGradient colors={COLORS.gradientBg} start={{ x: 0.1, y: 0 }} end={{ x: 0.7, y: 1 }} style={{ flex: 1 }}>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <CookieLogo size={44} style={styles.logoRow} />
+      <CookieLogo size={46} onColor style={styles.logoRow} />
       <Text style={styles.subtitle}>다시 만나서 반가워요</Text>
 
       <TextInput
@@ -77,6 +79,7 @@ export default function LoginScreen({ navigation }) {
         <Text style={styles.link}>계정이 없으신가요? 회원가입</Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
@@ -98,7 +101,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 28,
-    backgroundColor: COLORS.bg,
   },
   logoRow: { alignSelf: "center", marginBottom: 6 },
   logo: {
@@ -110,27 +112,26 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     textAlign: "center",
-    color: COLORS.textLight,
+    color: "rgba(255,255,255,0.92)", fontFamily: FONTS.bold,
     marginBottom: 32,
   },
   input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderWidth: 0,
+    borderRadius: 28,
+    paddingHorizontal: 22,
+    paddingVertical: 16,
     marginBottom: 12,
     fontSize: 16,
     backgroundColor: COLORS.card,
     color: COLORS.text,
   },
   button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 15,
+    backgroundColor: COLORS.primaryDark,
+    borderRadius: 28,
+    paddingVertical: 17,
     alignItems: "center",
     marginTop: 8,
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  link: { color: COLORS.primary, textAlign: "center", marginTop: 20 },
+  buttonText: { color: COLORS.accent, fontSize: 17, fontFamily: FONTS.heading },
+  link: { color: "#fff", fontFamily: FONTS.bold, textAlign: "center", marginTop: 20 },
 });

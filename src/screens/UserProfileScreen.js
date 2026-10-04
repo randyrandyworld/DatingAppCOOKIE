@@ -1,6 +1,7 @@
 import React from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
-import { COLORS } from "../theme";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS, FONTS } from "../theme";
 
 export default function UserProfileScreen({ route }) {
   const { otherUser } = route.params;
@@ -18,12 +19,14 @@ export default function UserProfileScreen({ route }) {
         <View style={styles.metaRow}>
           {otherUser?.height ? (
             <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>📏 {otherUser.height}cm</Text>
+              <Ionicons name="resize-outline" size={15} color={COLORS.primary} />
+              <Text style={styles.metaChipText}>{otherUser.height}cm</Text>
             </View>
           ) : null}
           {otherUser?._distance != null ? (
             <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>📍 {otherUser._distance.toFixed(1)}km</Text>
+              <Ionicons name="location-outline" size={15} color={COLORS.primary} />
+              <Text style={styles.metaChipText}>{otherUser._distance.toFixed(1)}km</Text>
             </View>
           ) : null}
         </View>
@@ -31,7 +34,10 @@ export default function UserProfileScreen({ route }) {
         {!!otherUser?.job && (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>직업</Text>
-            <Text style={styles.sectionText}>💼 {otherUser.job}</Text>
+            <View style={styles.jobRow}>
+              <Ionicons name="briefcase-outline" size={17} color={COLORS.primary} />
+              <Text style={styles.sectionText}>{otherUser.job}</Text>
+            </View>
           </View>
         )}
 
@@ -62,9 +68,13 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 60 },
   photo: { width: "100%", height: 420, backgroundColor: COLORS.border },
   infoSection: { padding: 24 },
-  name: { fontSize: 26, fontWeight: "800", marginBottom: 12, color: COLORS.text },
+  name: { fontSize: 28, fontFamily: FONTS.heading, marginBottom: 12, color: COLORS.text },
   metaRow: { flexDirection: "row", gap: 8, marginBottom: 20 },
+  jobRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -72,7 +82,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  metaChipText: { fontSize: 13, fontWeight: "700", color: COLORS.primaryDark },
+  metaChipText: { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.primaryDark },
   section: { marginBottom: 20 },
   sectionLabel: {
     fontSize: 12,

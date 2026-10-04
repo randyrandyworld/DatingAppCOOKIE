@@ -1,26 +1,15 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
-// 별도 라이브러리 없이 만든 "아래쪽이 점점 어두워지는" 그라데이션.
-// 투명한 띠를 여러 장 겹쳐서 위→아래로 갈수록 진해지게 한다. (카드 하단 이름/정보 가독성용)
-const STEPS = 14;
-
-export default function FadeOverlay({ height = 240, color = "20,12,6", maxOpacity = 0.82, style }) {
+// 카드 아래쪽이 자연스럽게 어두워지는 그라데이션 (이름/정보 글씨 가독성용)
+export default function FadeOverlay({ height = 260, style }) {
   return (
-    <View pointerEvents="none" style={[styles.wrap, { height }, style]}>
-      {Array.from({ length: STEPS }).map((_, i) => {
-        const t = (i + 1) / STEPS; // 0→1 (위→아래)
-        return (
-          <View
-            key={i}
-            style={{
-              flex: 1,
-              backgroundColor: `rgba(${color},${(maxOpacity * t * t).toFixed(3)})`,
-            }}
-          />
-        );
-      })}
-    </View>
+    <LinearGradient
+      pointerEvents="none"
+      colors={["rgba(20,10,5,0)", "rgba(20,10,5,0.78)"]}
+      style={[styles.wrap, { height }, style]}
+    />
   );
 }
 

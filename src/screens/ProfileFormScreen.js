@@ -268,7 +268,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         style={styles.input}
         value={job}
         onChangeText={setJob}
-        placeholder="예: 우주비행사 😄"
+        placeholder="예: 디자이너"
       />
 
       <Text style={styles.label}>자기소개</Text>

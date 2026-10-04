@@ -3,13 +3,24 @@ import { ActivityIndicator, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useFonts, GowunDodum_400Regular } from "@expo-google-fonts/gowun-dodum";
+import { useFonts } from "expo-font";
+import { Nunito_900Black } from "@expo-google-fonts/nunito";
+import {
+  GothicA1_400Regular,
+  GothicA1_700Bold,
+  GothicA1_800ExtraBold,
+} from "@expo-google-fonts/gothic-a1";
 import { AuthProvider } from "./src/context/AuthContext";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { COLORS } from "./src/theme";
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ GowunDodum_400Regular });
+  const [fontsLoaded] = useFonts({
+    Nunito_900Black,
+    GothicA1_400Regular,
+    GothicA1_700Bold,
+    GothicA1_800ExtraBold,
+  });
 
   if (!fontsLoaded) {
     return (

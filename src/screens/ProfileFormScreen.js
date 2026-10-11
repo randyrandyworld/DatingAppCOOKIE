@@ -13,13 +13,15 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { File, UploadTask, UploadType } from "expo-file-system";
+import { Ionicons } from "@expo/vector-icons";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import cloudinaryConfig from "../cloudinaryConfig";
+import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
 
-const GENDERS = ["남성", "여성", "기타"];
+const GENDERS = ["남성", "여성"];
 const SEEKING = ["남성", "여성"];
 const PHOTO_SLOTS = 3;
 
@@ -60,12 +62,29 @@ const INTERESTS = [
   "캠핑/아웃도어",
 ];
 
+function isValidDate(y, m, d) {
+  if (!y || !m || !d) return false;
+  if (m < 1 || m > 12) return false;
+  const daysInMonth = new Date(y, m, 0).getDate();
+  if (d < 1 || d > daysInMonth) return false;
+  if (y < 1920 || y > new Date().getFullYear()) return false;
+  return true;
+}
+
 export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const { user, profile, logout } = useAuth();
   const existing = mode === "edit" ? profile : null;
+  const birthLocked = !!existing?.birthDate;
+  const heightLocked = !!existing?.height;
+
+  const [existingY, existingM, existingD] = existing?.birthDate
+    ? existing.birthDate.split("-")
+    : ["", "", ""];
 
   const [name, setName] = useState(existing?.name || "");
-  const [age, setAge] = useState(existing?.age ? String(existing.age) : "");
+  const [birthYear, setBirthYear] = useState(existingY ? String(Number(existingY)) : "");
+  const [birthMonth, setBirthMonth] = useState(existingM ? String(Number(existingM)) : "");
+  const [birthDay, setBirthDay] = useState(existingD ? String(Number(existingD)) : "");
   const [gender, setGender] = useState(existing?.gender || "");
   const [seekingGender, setSeekingGender] = useState(existing?.seekingGender || "");
   const [height, setHeight] = useState(existing?.height ? String(existing.height) : "");
@@ -185,11 +204,16 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const onSave = async () => {
     setError("");
     setOkMsg("");
-    const ageNum = Number(age);
+
+    const y = Number(birthYear);
+    const m = Number(birthMonth);
+    const d = Number(birthDay);
     const heightNum = Number(height);
 
     if (!name.trim()) { setError("이름을 입력해주세요."); return; }
-    if (!ageNum) { setError("나이를 입력해주세요."); return; }
+    if (!isValidDate(y, m, d)) { setError("생년월일을 정확히 입력해주세요."); return; }
+    const birthDate = `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const ageNum = calcKoreanAge(birthDate);
     if (!gender) { setError("성별을 선택해주세요."); return; }
     if (!seekingGender) { setError("만나고 싶은 성별을 선택해주세요."); return; }
     if (ageNum < 18) { setError("만 18세 이상만 이용할 수 있어요."); return; }
@@ -214,6 +238,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         doc(db, "users", user.uid),
         {
           name: name.trim(),
+          birthDate,
           age: ageNum,
           gender,
           seekingGender,
@@ -259,6 +284,13 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     </View>
   );
 
+  const previewAge =
+    isValidDate(Number(birthYear), Number(birthMonth), Number(birthDay))
+      ? calcKoreanAge(
+          `${String(Number(birthYear)).padStart(4, "0")}-${String(Number(birthMonth)).padStart(2, "0")}-${String(Number(birthDay)).padStart(2, "0")}`
+        )
+      : null;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>
@@ -290,14 +322,47 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       <Text style={styles.label}>이름</Text>
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="닉네임 또는 이름" />
 
-      <Text style={styles.label}>나이</Text>
-      <TextInput
-        style={styles.input}
-        value={age}
-        onChangeText={setAge}
-        placeholder="예: 27"
-        keyboardType="number-pad"
-      />
+      <Text style={styles.label}>생년월일</Text>
+      {birthLocked ? (
+        <View style={styles.lockedRow}>
+          <Ionicons name="lock-closed" size={15} color={COLORS.textLight} />
+          <Text style={styles.lockedText}>
+            {existingY}년 {Number(existingM)}월 {Number(existingD)}일 (만 {existing.age ?? previewAge}세)
+          </Text>
+        </View>
+      ) : (
+        <>
+          <View style={styles.dateRow}>
+            <TextInput
+              style={[styles.input, styles.dateInputYear]}
+              value={birthYear}
+              onChangeText={setBirthYear}
+              placeholder="YYYY"
+              keyboardType="number-pad"
+              maxLength={4}
+            />
+            <TextInput
+              style={[styles.input, styles.dateInputSmall]}
+              value={birthMonth}
+              onChangeText={setBirthMonth}
+              placeholder="MM"
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+            <TextInput
+              style={[styles.input, styles.dateInputSmall]}
+              value={birthDay}
+              onChangeText={setBirthDay}
+              placeholder="DD"
+              keyboardType="number-pad"
+              maxLength={2}
+            />
+          </View>
+          {previewAge != null && (
+            <Text style={styles.hint}>만 {previewAge}세 — 저장하면 생년월일은 더 이상 바꿀 수 없어요</Text>
+          )}
+        </>
+      )}
 
       <Text style={styles.label}>내 성별</Text>
       <View style={styles.genderRow}>
@@ -330,13 +395,20 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       </View>
 
       <Text style={styles.label}>키 (cm)</Text>
-      <TextInput
-        style={styles.input}
-        value={height}
-        onChangeText={setHeight}
-        placeholder="예: 175"
-        keyboardType="number-pad"
-      />
+      {heightLocked ? (
+        <View style={styles.lockedRow}>
+          <Ionicons name="lock-closed" size={15} color={COLORS.textLight} />
+          <Text style={styles.lockedText}>{existing.height}cm</Text>
+        </View>
+      ) : (
+        <TextInput
+          style={styles.input}
+          value={height}
+          onChangeText={setHeight}
+          placeholder="예: 175"
+          keyboardType="number-pad"
+        />
+      )}
 
       <Text style={styles.label}>직업</Text>
       <TextInput
@@ -439,6 +511,19 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   bioInput: { minHeight: 90, textAlignVertical: "top" },
+  dateRow: { flexDirection: "row", gap: 10 },
+  dateInputYear: { flex: 1.3, textAlign: "center" },
+  dateInputSmall: { flex: 1, textAlign: "center" },
+  lockedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  lockedText: { fontSize: 15, color: COLORS.text, fontWeight: "600" },
   genderRow: { flexDirection: "row", gap: 10 },
   genderChip: {
     paddingVertical: 10,

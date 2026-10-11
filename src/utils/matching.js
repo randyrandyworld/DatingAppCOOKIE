@@ -58,6 +58,21 @@ export async function recordSwipeAndCheckMatch(myUid, targetUid, liked, myName, 
   return null;
 }
 
+// 생년월일("1994-01-02")로 만 나이를 계산 — 생일이 아직 안 지났으면 1살 덜 쳐줌
+export function calcKoreanAge(birthDate) {
+  if (!birthDate) return null;
+  const [y, m, d] = birthDate.split("-").map(Number);
+  if (!y || !m || !d) return null;
+
+  const today = new Date();
+  let age = today.getFullYear() - y;
+  const hadBirthdayThisYear =
+    today.getMonth() + 1 > m || (today.getMonth() + 1 === m && today.getDate() >= d);
+  if (!hadBirthdayThisYear) age -= 1;
+  return age;
+}
+
+// (예전 코드 호환용 — 더미 유저처럼 출생연도만 있는 경우)
 export function calcAge(birthYear) {
   if (!birthYear) return null;
   return new Date().getFullYear() - Number(birthYear);

@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
+import { calcKoreanAge } from "./matching";
 
 // 누군가 좋아요를 누르면 상대방 쪽에 "날 좋아요함" 기록 남기기 (슈퍼라이크 여부도 같이 저장)
 export async function recordLikeReceived(receiverUid, senderUid, isSuper = false) {
@@ -45,7 +46,13 @@ export async function getLikesYouList(uid) {
     likeDocs.map(async (d) => {
       const snap = await getDoc(doc(db, "users", d.id));
       if (!snap.exists()) return null;
-      return { id: snap.id, ...snap.data(), _isSuper: d.data().isSuper || false };
+      const data = snap.data();
+      return {
+        id: snap.id,
+        ...data,
+        age: data.birthDate ? calcKoreanAge(data.birthDate) : data.age,
+        _isSuper: d.data().isSuper || false,
+      };
     })
   );
   return profiles

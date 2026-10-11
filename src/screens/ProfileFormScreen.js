@@ -76,6 +76,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const existing = mode === "edit" ? profile : null;
   const birthLocked = !!existing?.birthDate;
   const heightLocked = !!existing?.height;
+  const genderLocked = !!existing?.gender;
 
   const [existingY, existingM, existingD] = existing?.birthDate
     ? existing.birthDate.split("-")
@@ -365,19 +366,26 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       )}
 
       <Text style={styles.label}>내 성별</Text>
-      <View style={styles.genderRow}>
-        {GENDERS.map((g) => (
-          <TouchableOpacity
-            key={g}
-            style={[styles.genderChip, gender === g && styles.genderChipActive]}
-            onPress={() => setGender(g)}
-          >
-            <Text style={[styles.genderChipText, gender === g && styles.genderChipTextActive]}>
-              {g}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {genderLocked ? (
+        <View style={styles.lockedRow}>
+          <Ionicons name="lock-closed" size={15} color={COLORS.textLight} />
+          <Text style={styles.lockedText}>{existing.gender}</Text>
+        </View>
+      ) : (
+        <View style={styles.genderRow}>
+          {GENDERS.map((g) => (
+            <TouchableOpacity
+              key={g}
+              style={[styles.genderChip, gender === g && styles.genderChipActive]}
+              onPress={() => setGender(g)}
+            >
+              <Text style={[styles.genderChipText, gender === g && styles.genderChipTextActive]}>
+                {g}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       <Text style={styles.label}>만나고 싶은 성별</Text>
       <View style={styles.genderRow}>

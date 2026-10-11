@@ -21,6 +21,8 @@ import { recordSwipeAndCheckMatch } from "../utils/matching";
 import { getBlockedIds, showReportBlockMenu, REPORT_HIDE_THRESHOLD } from "../utils/blocking";
 import { distanceKm } from "../utils/distance";
 import { isAdminUid } from "../adminConfig";
+import { getFreeSuperLikeStatus, markFreeSuperLikeUsed } from "../utils/superLike";
+import { spendOn, getCookieBalance, COOKIE_PRICES } from "../utils/cookies";
 import CookieLogo from "../components/CookieLogo";
 import FadeOverlay from "../components/FadeOverlay";
 import CookieMark from "../components/CookieMark";
@@ -44,6 +46,7 @@ export default function DiscoverScreen({ navigation }) {
   const [matchInfo, setMatchInfo] = useState(null); // { matchId, otherUser } or null
 
   const position = useRef(new Animated.ValueXY()).current;
+  const superFlash = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadCandidates();
@@ -117,13 +120,13 @@ export default function DiscoverScreen({ navigation }) {
     [candidates, index, busy]
   );
 
-  const forceSwipe = (direction) => {
+  const forceSwipe = (direction, isSuper = false) => {
     if (busy) return;
     Animated.timing(position, {
       toValue: { x: direction === "right" ? width * 1.5 : -width * 1.5, y: 0 },
       duration: 220,
       useNativeDriver: false,
-    }).start(() => onSwipeComplete(direction));
+    }).start(() => onSwipeComplete(direction, isSuper));
   };
 
   const resetPosition = () => {
@@ -133,7 +136,7 @@ export default function DiscoverScreen({ navigation }) {
     }).start();
   };
 
-  const onSwipeComplete = async (direction) => {
+  const onSwipeComplete = async (direction, isSuper = false) => {
     const target = candidates[index];
     position.setValue({ x: 0, y: 0 });
     setIndex((i) => i + 1);
@@ -146,7 +149,8 @@ export default function DiscoverScreen({ navigation }) {
         user.uid,
         target.id,
         liked,
-        profile?.name
+        profile?.name,
+        isSuper
       );
       if (matchId) {
         setMatchInfo({ matchId, otherUser: target });
@@ -170,6 +174,48 @@ export default function DiscoverScreen({ navigation }) {
       onBlocked: skipCurrent,
       onReported: skipCurrent,
     });
+  };
+
+  const flashSuper = () => {
+    superFlash.setValue(1);
+    Animated.timing(superFlash, {
+      toValue: 0,
+      duration: 700,
+      delay: 400,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleSuperLike = async () => {
+    if (busy || !current) return;
+
+    const { available, nextAvailableAt } = await getFreeSuperLikeStatus(user.uid);
+    if (available) {
+      await markFreeSuperLikeUsed(user.uid);
+      flashSuper();
+      forceSwipe("right", true);
+      return;
+    }
+
+    const balance = await getCookieBalance(user.uid);
+    if (balance < COOKIE_PRICES.superLike) {
+      const hoursLeft = nextAvailableAt
+        ? Math.max(1, Math.ceil((nextAvailableAt.getTime() - Date.now()) / 3600000))
+        : null;
+      Alert.alert(
+        "슈퍼라이크를 다 썼어요 ⭐",
+        hoursLeft
+          ? `무료 슈퍼라이크는 ${hoursLeft}시간 후에 다시 생겨요. 지금 쓰려면 쿠키 ${COOKIE_PRICES.superLike}개가 필요해요. (보유: ${balance}개)`
+          : `쿠키 ${COOKIE_PRICES.superLike}개가 필요해요. (보유: ${balance}개)`
+      );
+      return;
+    }
+
+    const ok = await spendOn(user.uid, "superLike");
+    if (ok) {
+      flashSuper();
+      forceSwipe("right", true);
+    }
   };
 
   const goToChat = () => {
@@ -291,6 +337,22 @@ export default function DiscoverScreen({ navigation }) {
             >
               <Ionicons name="close" size={36} color={COLORS.textLight} />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.superLikeWrap}
+              onPress={handleSuperLike}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={["#4FACFE", "#00C2FF"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.superLikeButton}
+              >
+                <Ionicons name="star" size={24} color="#fff" />
+              </LinearGradient>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.likeWrap}
               onPress={() => forceSwipe("right")}
@@ -308,6 +370,14 @@ export default function DiscoverScreen({ navigation }) {
           </View>
         </>
       )}
+
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.superFlashOverlay, { opacity: superFlash }]}
+      >
+        <Ionicons name="star" size={72} color="#4FACFE" />
+        <Text style={styles.superFlashText}>슈퍼라이크!</Text>
+      </Animated.View>
 
       {matchInfo && (
         <CookieMatchOverlay
@@ -591,7 +661,8 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 36,
+    alignItems: "center",
+    gap: 20,
     paddingBottom: 14,
     paddingTop: 10,
   },
@@ -609,6 +680,40 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   passButton: {},
+  superLikeWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    shadowColor: "#2E86DE",
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+  },
+  superLikeButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  superFlashOverlay: {
+    position: "absolute",
+    top: "40%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  superFlashText: {
+    marginTop: 8,
+    color: "#4FACFE",
+    fontSize: 20,
+    fontFamily: FONTS.heading,
+    textShadowColor: "rgba(0,0,0,0.15)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
   likeWrap: {
     width: 74,
     height: 74,

@@ -93,6 +93,12 @@ export default function LikesYouScreen({ navigation }) {
         const isUnlocked = unlocked[item.id];
         return (
           <View style={styles.card}>
+            {item._isSuper && (
+              <View style={styles.superBadge}>
+                <Ionicons name="star" size={12} color="#fff" />
+              </View>
+            )}
+
             <Image source={{ uri: item.photos?.[0] }} style={styles.photo} />
             {!isUnlocked && (
               <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
@@ -146,6 +152,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   photo: { width: "100%", height: "100%" },
+  superBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    backgroundColor: "#4FACFE",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
   nameTag: {
     position: "absolute",
     bottom: 44,

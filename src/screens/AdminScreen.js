@@ -11,12 +11,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { collection, doc, getDoc, onSnapshot, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, onSnapshot, query, updateDoc, where } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { isAdminUid } from "../adminConfig";
 import { COLORS, FONTS } from "../theme";
 import { isScreenGuardOn, setScreenGuardOn } from "../utils/screenGuard";
+import { addCookies } from "../utils/cookies";
+import { BOOST_DURATION_MIN } from "../utils/boost";
 import { CookieMatchOverlay } from "./DiscoverScreen";
 import {
   clearDummyData,
@@ -98,6 +100,25 @@ export default function AdminScreen() {
       );
     });
 
+  // 테스트용: 내 쿠키 충전 / 더미(25km 거리) 부스트 켜기·끄기
+  const onAddCookies = () =>
+    run("cookies", async () => {
+      await addCookies(user.uid, 50);
+      setNote("쿠키 50개를 충전했어요.");
+    });
+
+  const onDummyBoost = (on) =>
+    run("dummyboost", async () => {
+      await updateDoc(doc(db, "users", "dummy_05"), {
+        boostedUntil: on ? Date.now() + BOOST_DURATION_MIN * 60 * 1000 : 0,
+      });
+      setNote(
+        on
+          ? "더미 5번(내 위치에서 25km)에 부스트를 켰어요. 홈에서 새로고침하면 맨 앞에 떠요. (더미를 먼저 만들어야 해요)"
+          : "더미 5번의 부스트를 껐어요."
+      );
+    });
+
   const onClear = () =>
     Alert.alert("더미 데이터 삭제", "더미 유저와 그와 관련된 내 스와이프·매칭·채팅을 모두 지워요. 진행할까요?", [
       { text: "취소", style: "cancel" },
@@ -166,6 +187,12 @@ export default function AdminScreen() {
             setGuardOn(next);
           }}
         />
+      </Section>
+
+      <Section title="쿠키 / 부스트 테스트" desc="쿠키 결제 기능을 시험할 때 써요.">
+        <Btn label="내 쿠키 +50 충전" onPress={onAddCookies} disabled={!!busy} />
+        <Btn label="더미 부스트 켜기 (30분)" onPress={() => onDummyBoost(true)} disabled={!!busy} />
+        <Btn label="더미 부스트 끄기" kind="danger" onPress={() => onDummyBoost(false)} disabled={!!busy} />
       </Section>
 
       <Section

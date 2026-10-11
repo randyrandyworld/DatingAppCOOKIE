@@ -23,6 +23,25 @@ const GENDERS = ["남성", "여성", "기타"];
 const SEEKING = ["남성", "여성"];
 const PHOTO_SLOTS = 3;
 
+const REGIONS = ["서울", "경기·인천", "강원", "충청", "전라", "경상", "제주"];
+const RELIGIONS = ["무교", "기독교", "천주교", "불교", "기타", "비공개"];
+const DRINKING_OPTIONS = [
+  "자주 마셔요",
+  "가끔 마셔요",
+  "특별한 날에만",
+  "거의 안 마셔요",
+  "안 마셔요",
+  "비공개",
+];
+const SMOKING_OPTIONS = [
+  "안 피워요",
+  "술자리에서만",
+  "액상형 전자담배",
+  "궐련형 전자담배",
+  "연초",
+  "비공개",
+];
+
 export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const { user, profile, logout } = useAuth();
   const existing = mode === "edit" ? profile : null;
@@ -34,6 +53,10 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const [height, setHeight] = useState(existing?.height ? String(existing.height) : "");
   const [job, setJob] = useState(existing?.job || "");
   const [bio, setBio] = useState(existing?.bio || "");
+  const [region, setRegion] = useState(existing?.region || "");
+  const [religion, setReligion] = useState(existing?.religion || "");
+  const [drinking, setDrinking] = useState(existing?.drinking || "");
+  const [smoking, setSmoking] = useState(existing?.smoking || "");
   const [photos, setPhotos] = useState(
     existing?.photos?.length
       ? [...existing.photos, ...Array(PHOTO_SLOTS - existing.photos.length).fill(null)]
@@ -166,6 +189,10 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           ...(height ? { height: Number(height) } : {}),
           job: job.trim(),
           bio: bio.trim(),
+          ...(region ? { region } : {}),
+          ...(religion ? { religion } : {}),
+          ...(drinking ? { drinking } : {}),
+          ...(smoking ? { smoking } : {}),
           photos: finalPhotos,
           ...(location ? { location } : {}),
           updatedAt: serverTimestamp(),
@@ -183,6 +210,22 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       setSaving(false);
     }
   };
+
+  const ChipGroup = ({ options, value, onChange }) => (
+    <View style={styles.chipWrap}>
+      {options.map((opt) => (
+        <TouchableOpacity
+          key={opt}
+          style={[styles.optionChip, value === opt && styles.optionChipActive]}
+          onPress={() => onChange(opt)}
+        >
+          <Text style={[styles.optionChipText, value === opt && styles.optionChipTextActive]}>
+            {opt}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -271,6 +314,18 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         placeholder="예: 디자이너"
       />
 
+      <Text style={styles.label}>활동 지역 (선택)</Text>
+      <ChipGroup options={REGIONS} value={region} onChange={setRegion} />
+
+      <Text style={styles.label}>종교 (선택)</Text>
+      <ChipGroup options={RELIGIONS} value={religion} onChange={setReligion} />
+
+      <Text style={styles.label}>음주 (선택)</Text>
+      <ChipGroup options={DRINKING_OPTIONS} value={drinking} onChange={setDrinking} />
+
+      <Text style={styles.label}>흡연 (선택)</Text>
+      <ChipGroup options={SMOKING_OPTIONS} value={smoking} onChange={setSmoking} />
+
       <Text style={styles.label}>자기소개</Text>
       <TextInput
         style={[styles.input, styles.bioInput]}
@@ -346,6 +401,18 @@ const styles = StyleSheet.create({
   genderChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   genderChipText: { color: COLORS.textLight, fontWeight: "600" },
   genderChipTextActive: { color: "#fff" },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  optionChip: {
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+  },
+  optionChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  optionChipText: { color: COLORS.textLight, fontWeight: "600", fontSize: 13 },
+  optionChipTextActive: { color: "#fff" },
   error: { color: COLORS.danger, marginTop: 16, fontSize: 14, textAlign: "center" },
   ok: { color: "#1a8f3c", marginTop: 16, fontSize: 14, textAlign: "center" },
   saveButton: {

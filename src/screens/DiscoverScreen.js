@@ -22,6 +22,7 @@ import { getBlockedIds, showReportBlockMenu, REPORT_HIDE_THRESHOLD } from "../ut
 import { distanceKm } from "../utils/distance";
 import { isAdminUid } from "../adminConfig";
 import { getFreeSuperLikeStatus, markFreeSuperLikeUsed } from "../utils/superLike";
+import { tryUseLike, DAILY_LIKE_LIMIT } from "../utils/dailyLikes";
 import { spendOn, getCookieBalance, COOKIE_PRICES } from "../utils/cookies";
 import { useUnreadMatchesCount } from "../utils/unread";
 import { useLikesYouCount } from "../utils/likesYou";
@@ -53,6 +54,7 @@ export default function DiscoverScreen({ navigation }) {
 
   const position = useRef(new Animated.ValueXY()).current;
   const superFlash = useRef(new Animated.Value(0)).current;
+  const checkingLike = useRef(false);
 
   useEffect(() => {
     loadCandidates();
@@ -115,7 +117,7 @@ export default function DiscoverScreen({ navigation }) {
         ),
         onPanResponderRelease: (_, g) => {
           if (g.dx > SWIPE_THRESHOLD) {
-            forceSwipe("right");
+            handleLikeAttempt();
           } else if (g.dx < -SWIPE_THRESHOLD) {
             forceSwipe("left");
           } else {
@@ -165,6 +167,41 @@ export default function DiscoverScreen({ navigation }) {
       // 조용히 무시
     } finally {
       setBusy(false);
+    }
+  };
+
+  // 오른쪽(좋아요) 스와이프는 하루 무료 한도부터 체크 — 다 썼으면 쿠키로 추가 구매
+  const handleLikeAttempt = async () => {
+    if (busy || !current || checkingLike.current) {
+      if (!busy) resetPosition();
+      return;
+    }
+    checkingLike.current = true;
+    try {
+      const ok = await tryUseLike(user.uid);
+      if (ok) {
+        forceSwipe("right");
+        return;
+      }
+
+      const balance = await getCookieBalance(user.uid);
+      if (balance < COOKIE_PRICES.extraLike) {
+        resetPosition();
+        Alert.alert(
+          "오늘 무료 좋아요를 다 썼어요 🍪",
+          `하루 무료 좋아요 ${DAILY_LIKE_LIMIT}개를 다 썼어요. 좋아요를 더 보내려면 쿠키 ${COOKIE_PRICES.extraLike}개가 필요해요. (보유: ${balance}개)\n무료 좋아요는 내일 다시 채워져요.`
+        );
+        return;
+      }
+
+      const spent = await spendOn(user.uid, "extraLike");
+      if (spent) {
+        forceSwipe("right");
+      } else {
+        resetPosition();
+      }
+    } finally {
+      checkingLike.current = false;
     }
   };
 
@@ -370,7 +407,7 @@ export default function DiscoverScreen({ navigation }) {
 
             <TouchableOpacity
               style={styles.likeWrap}
-              onPress={() => forceSwipe("right")}
+              onPress={handleLikeAttempt}
               activeOpacity={0.85}
             >
               <LinearGradient

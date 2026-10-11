@@ -6,6 +6,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { sendPushNotificationToUser } from "./notifications";
+import { recordLikeReceived } from "./likesYou";
 
 // 두 유저의 uid로 항상 같은 매치 id를 만든다 (정렬해서 합치기)
 export function getMatchId(uidA, uidB) {
@@ -23,6 +24,8 @@ export async function recordSwipeAndCheckMatch(myUid, targetUid, liked, myName) 
   });
 
   if (!liked) return null;
+
+  await recordLikeReceived(targetUid, myUid); // 상대방 쪽에 "날 좋아요함" 기록
 
   // 상대가 나를 이미 좋아요 했는지 확인
   const theirSwipeSnap = await getDoc(

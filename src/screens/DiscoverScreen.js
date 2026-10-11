@@ -26,7 +26,15 @@ import { tryUseLike, DAILY_LIKE_LIMIT } from "../utils/dailyLikes";
 import { spendOn, getCookieBalance, COOKIE_PRICES } from "../utils/cookies";
 import { useUnreadMatchesCount } from "../utils/unread";
 import { useLikesYouCount } from "../utils/likesYou";
+import {
+  activateBoost,
+  boostMinutesLeft,
+  BOOST_DURATION_MIN,
+  BOOST_RADIUS_KM,
+  sortWithBoost,
+} from "../utils/boost";
 import CookieLogo from "../components/CookieLogo";
+import CookieBalance from "../components/CookieBalance";
 import FadeOverlay from "../components/FadeOverlay";
 import CookieMark from "../components/CookieMark";
 import { Ionicons } from "@expo/vector-icons";
@@ -48,6 +56,17 @@ export default function DiscoverScreen({ navigation }) {
   const unreadMatches = useUnreadMatchesCount(user?.uid);
   const likesYouCount = useLikesYouCount(user?.uid);
   const hasNotification = unreadMatches + likesYouCount > 0;
+
+  // 부스트 상태: 끝나는 시각(ms). 30초마다 남은 시간을 새로 계산
+  const [boostUntil, setBoostUntil] = useState(profile?.boostedUntil ?? 0);
+  const [nowTick, setNowTick] = useState(Date.now());
+  const boostActive = boostUntil > nowTick;
+
+  useEffect(() => {
+    if (boostUntil <= Date.now()) return undefined;
+    const t = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, [boostUntil]);
 
   // 매칭 연출용 상태
   const [matchInfo, setMatchInfo] = useState(null); // { matchId, otherUser } or null
@@ -98,7 +117,7 @@ export default function DiscoverScreen({ navigation }) {
 
   const candidates = useMemo(() => {
     const myLoc = profile?.location;
-    return rawList
+    const withDistance = rawList
       .map((u) => {
         let d = null;
         if (myLoc && u.location) {
@@ -107,6 +126,8 @@ export default function DiscoverScreen({ navigation }) {
         return { ...u, _distance: d };
       })
       .filter((u) => u._distance == null || u._distance <= maxDist);
+    // 부스트 중인 사람(내 주변 30km 안)을 앞으로
+    return sortWithBoost(withDistance);
   }, [rawList, maxDist, profile?.location]);
 
   useEffect(() => {
@@ -268,6 +289,46 @@ export default function DiscoverScreen({ navigation }) {
     }
   };
 
+  // 부스트 버튼: 켜져 있으면 상태 안내, 꺼져 있으면 쿠키로 켜기
+  const onBoostPress = async () => {
+    if (boostActive) {
+      Alert.alert(
+        "부스트 진행 중",
+        `내 주변 ${BOOST_RADIUS_KM}km 안의 사람들에게 내 프로필이 먼저 보이고 있어요.\n남은 시간: ${boostMinutesLeft(boostUntil, nowTick)}분`
+      );
+      return;
+    }
+    const price = COOKIE_PRICES.boost;
+    const balance = await getCookieBalance(user.uid);
+    if (balance < price) {
+      Alert.alert("쿠키가 부족해요", `부스트에는 쿠키 ${price}개가 필요해요. (보유: ${balance}개)`);
+      return;
+    }
+    Alert.alert(
+      "부스트를 켤까요?",
+      `${BOOST_DURATION_MIN}분 동안 내 주변 ${BOOST_RADIUS_KM}km 안의 사람들에게 내 프로필이 먼저 보여요.\n\n쿠키 ${price}개 · 보유 ${balance}개`,
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "켜기",
+          onPress: async () => {
+            try {
+              const res = await activateBoost(user.uid);
+              if (!res.ok) {
+                Alert.alert("쿠키가 부족해요", "쿠키가 모자라서 부스트를 켜지 못했어요.");
+                return;
+              }
+              setBoostUntil(res.until);
+              setNowTick(Date.now());
+            } catch (e) {
+              Alert.alert("부스트 실패", e?.message || "잠시 후 다시 시도해주세요.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const goToChat = () => {
     if (!matchInfo) return;
     const { matchId, otherUser } = matchInfo;
@@ -301,8 +362,19 @@ export default function DiscoverScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* 상단 바: 왼쪽 로고, 오른쪽에 알림 아이콘 + 거리 필터 알약 */}
       <View style={styles.filterHeader}>
-        <CookieLogo size={26} />
+        <CookieLogo size={22} />
         <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={[styles.boostButton, boostActive && styles.boostButtonActive]}
+            onPress={onBoostPress}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="flash" size={18} color={boostActive ? "#fff" : COLORS.primary} />
+            {boostActive && (
+              <Text style={styles.boostTime}>{boostMinutesLeft(boostUntil, nowTick)}분</Text>
+            )}
+          </TouchableOpacity>
+          <CookieBalance variant="pill" />
           <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => navigation.navigate("Notifications")}
@@ -605,7 +677,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 8,
   },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   notificationButton: {
     width: 34,
     height: 34,
@@ -614,6 +686,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  boostButton: {
+    minWidth: 34,
+    height: 34,
+    borderRadius: 17,
+    paddingHorizontal: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+  },
+  boostButtonActive: { backgroundColor: COLORS.primary },
+  boostTime: { color: "#fff", fontSize: 12, fontFamily: FONTS.bold },
   notificationDot: {
     position: "absolute",
     top: 4,
@@ -631,7 +718,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: COLORS.surface,
     borderRadius: 18,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 7,
   },
   filterPillText: { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.textLight },

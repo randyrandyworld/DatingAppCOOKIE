@@ -12,11 +12,13 @@ import { Ionicons } from "@expo/vector-icons";
 import FadeOverlay from "../components/FadeOverlay";
 import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
+import { useScreenGuard } from "../utils/screenGuard";
 
 const { width } = Dimensions.get("window");
 
 export default function UserProfileScreen({ route }) {
   const { otherUser } = route.params;
+  useScreenGuard("userProfile"); // 캡처 방지
   const [photoIndex, setPhotoIndex] = useState(0);
   const photos = otherUser?.photos?.length ? otherUser.photos : [null];
   const displayAge = otherUser?.birthDate ? calcKoreanAge(otherUser.birthDate) : otherUser?.age;

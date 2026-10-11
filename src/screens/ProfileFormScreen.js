@@ -20,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 import cloudinaryConfig from "../cloudinaryConfig";
 import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
+import CookieBalance from "../components/CookieBalance";
 
 const GENDERS = ["남성", "여성"];
 const SEEKING = ["남성", "여성"];
@@ -300,6 +301,8 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       <Text style={styles.subtitle}>
         사진 인증 없이 바로 시작할 수 있어요. 나를 잘 보여주는 사진과 소개를 채워보세요.
       </Text>
+
+      {mode === "edit" && <CookieBalance variant="card" />}
 
       <Text style={styles.label}>사진 (최소 1장)</Text>
       <View style={styles.photoRow}>

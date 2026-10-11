@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { getMatchId } from "./matching";
+import { showActionSheet } from "../components/ActionSheetHost";
 
 // 서로 다른 사용자 N명에게 신고가 쌓이면 다른 사람들의 카드 목록에서 자동으로 숨김
 export const REPORT_HIDE_THRESHOLD = 3;
@@ -62,37 +63,45 @@ export async function unmatchUser(myUid, targetUid) {
   });
 }
 
-// 프로필/채팅에서 "···" 버튼을 눌렀을 때 쓰는 공용 액션시트
+// 프로필/채팅에서 "···" 버튼을 눌렀을 때 쓰는 공용 메뉴.
+// 예전엔 react-native의 Alert.alert로 띄웠는데, 버튼이 4개(취소/매칭끊기/차단/신고)라서
+// 안드로이드에서는 3개 넘는 버튼이 잘려서 메뉴가 사라지고, 웹에서는 Alert.alert 자체가
+// 제대로 안 떠서 버튼이 하나도 안 보이는 문제가 있었음. 그래서 직접 만든 바텀시트(ActionSheetHost)로 띄움.
 export function showReportBlockMenu(
   myUid,
   target,
   { onBlocked, onReported, onUnmatched, allowUnmatch = false } = {}
 ) {
-  Alert.alert(`${target.name}님`, "신고하거나 차단할 수 있어요", [
-    { text: "취소", style: "cancel" },
-    ...(allowUnmatch
-      ? [
-          {
-            text: "매칭 끊기",
-            onPress: () =>
-              Alert.alert("매칭을 끊을까요?", "대화방이 두 사람 모두에게서 사라지고 되돌릴 수 없어요.", [
-                { text: "취소", style: "cancel" },
-                {
-                  text: "끊기",
-                  style: "destructive",
-                  onPress: async () => {
-                    try {
-                      await unmatchUser(myUid, target.id);
-                      onUnmatched?.();
-                    } catch (e) {
-                      Alert.alert("오류", e?.message || "다시 시도해주세요.");
-                    }
-                  },
-                },
-              ]),
-          },
-        ]
-      : []),
+  const buttons = [];
+
+  if (allowUnmatch) {
+    buttons.push({
+      text: "매칭 끊기",
+      style: "destructive",
+      onPress: () =>
+        showActionSheet({
+          title: "매칭을 끊을까요?",
+          message: "대화방이 두 사람 모두에게서 사라지고 되돌릴 수 없어요.",
+          buttons: [
+            {
+              text: "끊기",
+              style: "destructive",
+              onPress: async () => {
+                try {
+                  await unmatchUser(myUid, target.id);
+                  onUnmatched?.();
+                } catch (e) {
+                  Alert.alert("오류", e?.message || "다시 시도해주세요.");
+                }
+              },
+            },
+            { text: "취소", style: "cancel" },
+          ],
+        }),
+    });
+  }
+
+  buttons.push(
     {
       text: "차단하기",
       style: "destructive",
@@ -110,25 +119,35 @@ export function showReportBlockMenu(
       text: "신고하기",
       onPress: () => showReasonMenu(myUid, target, onReported),
     },
-  ]);
+    { text: "취소", style: "cancel" }
+  );
+
+  showActionSheet({
+    title: `${target.name}님`,
+    message: "원하는 동작을 선택해주세요",
+    buttons,
+  });
 }
 
 function showReasonMenu(myUid, target, onReported) {
-  Alert.alert(
-    "신고 사유를 선택해주세요",
-    "신고와 함께 자동으로 차단돼요",
-    REPORT_REASONS.map((reason) => ({
-      text: reason,
-      onPress: async () => {
-        try {
-          await reportUser(myUid, target.id, reason);
-          await blockUser(myUid, target.id);
-          Alert.alert("신고 접수됨", "신고가 접수됐고 해당 사용자를 차단했어요.");
-          onReported?.();
-        } catch (e) {
-          Alert.alert("오류", e?.message || "다시 시도해주세요.");
-        }
-      },
-    })).concat([{ text: "취소", style: "cancel" }])
-  );
+  showActionSheet({
+    title: "신고 사유를 선택해주세요",
+    message: "신고와 함께 자동으로 차단돼요",
+    buttons: [
+      ...REPORT_REASONS.map((reason) => ({
+        text: reason,
+        onPress: async () => {
+          try {
+            await reportUser(myUid, target.id, reason);
+            await blockUser(myUid, target.id);
+            Alert.alert("신고 접수됨", "신고가 접수됐고 해당 사용자를 차단했어요.");
+            onReported?.();
+          } catch (e) {
+            Alert.alert("오류", e?.message || "다시 시도해주세요.");
+          }
+        },
+      })),
+      { text: "취소", style: "cancel" },
+    ],
+  });
 }

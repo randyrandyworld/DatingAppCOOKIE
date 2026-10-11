@@ -12,6 +12,7 @@ import {
 } from "@expo-google-fonts/gothic-a1";
 import { AuthProvider } from "./src/context/AuthContext";
 import RootNavigator from "./src/navigation/RootNavigator";
+import ActionSheetHost from "./src/components/ActionSheetHost";
 import { COLORS } from "./src/theme";
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
         <AuthProvider>
           <StatusBar style="dark" />
           <RootNavigator />
+          <ActionSheetHost />
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

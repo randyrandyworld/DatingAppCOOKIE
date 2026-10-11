@@ -2,9 +2,11 @@ import React from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, FONTS } from "../theme";
+import { useScreenGuard } from "../utils/screenGuard";
 
 export default function UserProfileScreen({ route }) {
   const { otherUser } = route.params;
+  useScreenGuard("userProfile"); // 캡처 방지
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

@@ -16,6 +16,7 @@ import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { isAdminUid } from "../adminConfig";
 import { COLORS, FONTS } from "../theme";
+import { isScreenGuardOn, setScreenGuardOn } from "../utils/screenGuard";
 import { CookieMatchOverlay } from "./DiscoverScreen";
 import {
   clearDummyData,
@@ -32,6 +33,7 @@ export default function AdminScreen() {
   const [note, setNote] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [dummyMatches, setDummyMatches] = useState([]);
+  const [guardOn, setGuardOn] = useState(isScreenGuardOn());
 
   // 더미 유저와 매칭된 목록 (채팅 답장 버튼용)
   useEffect(() => {
@@ -149,6 +151,21 @@ export default function AdminScreen() {
 
       <Section title="화면 미리보기" desc="서버 없이 가짜 데이터로 바로 띄워봐요.">
         <Btn label="🍪 매칭 연출 (COOKIE!) 보기" onPress={() => setPreviewOpen(true)} />
+      </Section>
+
+      <Section
+        title="캡처 방지"
+        desc="홈·채팅·프로필 화면에서 스크린샷/화면 녹화를 막아요. 디자인 확인용으로 캡처가 필요할 때만 끄세요 (앱을 다시 켜면 다시 켜져요)."
+      >
+        <Btn
+          label={guardOn ? "캡처 방지: 켜짐 (눌러서 끄기)" : "캡처 방지: 꺼짐 (눌러서 켜기)"}
+          kind={guardOn ? "primary" : "danger"}
+          onPress={() => {
+            const next = !guardOn;
+            setScreenGuardOn(next);
+            setGuardOn(next);
+          }}
+        />
       </Section>
 
       <Section

@@ -19,9 +19,11 @@ import {
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { COLORS, FONTS } from "../theme";
+import { useScreenGuard } from "../utils/screenGuard";
 
 export default function MatchesScreen({ navigation }) {
   const { user } = useAuth();
+  useScreenGuard("matches"); // 캡처 방지
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState([]);
 

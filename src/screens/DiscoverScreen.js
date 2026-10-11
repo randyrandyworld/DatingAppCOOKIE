@@ -28,6 +28,8 @@ import { useLikesYouCount } from "../utils/likesYou";
 import CookieLogo from "../components/CookieLogo";
 import FadeOverlay from "../components/FadeOverlay";
 import CookieMark from "../components/CookieMark";
+import ScreenGuardNotice from "../components/ScreenGuardNotice";
+import { useScreenGuard } from "../utils/screenGuard";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { COLORS, FONTS } from "../theme";
@@ -37,6 +39,7 @@ const SWIPE_THRESHOLD = width * 0.28;
 
 export default function DiscoverScreen({ navigation }) {
   const { user, profile } = useAuth();
+  useScreenGuard("discover"); // 캡처 방지
   const [loading, setLoading] = useState(true);
   const [rawList, setRawList] = useState([]); // 필터 전 원본
   const [maxDist, setMaxDist] = useState(50); // 거리 설정 (기본 50km)
@@ -393,6 +396,8 @@ export default function DiscoverScreen({ navigation }) {
         <Ionicons name="star" size={72} color="#4FACFE" />
         <Text style={styles.superFlashText}>슈퍼라이크!</Text>
       </Animated.View>
+
+      <ScreenGuardNotice />
 
       {matchInfo && (
         <CookieMatchOverlay

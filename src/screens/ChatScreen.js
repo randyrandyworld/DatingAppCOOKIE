@@ -25,11 +25,13 @@ import { useAuth } from "../context/AuthContext";
 import { showReportBlockMenu } from "../utils/blocking";
 import { sendPushNotificationToUser } from "../utils/notifications";
 import { markMatchAsRead } from "../utils/unread";
+import { useScreenGuard } from "../utils/screenGuard";
 import { COLORS } from "../theme";
 
 export default function ChatScreen({ route, navigation }) {
   const { matchId, otherUser } = route.params;
   const { user, profile } = useAuth();
+  useScreenGuard("chat"); // 캡처 방지
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
   const [closed, setClosed] = useState(false); // 차단/매칭 끊김 상태면 더 이상 메시지를 보낼 수 없음

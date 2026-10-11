@@ -9,6 +9,7 @@ import SignupScreen from "../screens/SignupScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
 import ChatScreen from "../screens/ChatScreen";
 import UserProfileScreen from "../screens/UserProfileScreen";
+import NotificationsScreen from "../screens/NotificationsScreen";
 import MainTabs from "./MainTabs";
 import { navigationRef } from "./navigationRef";
 import { COLORS } from "../theme";
@@ -64,6 +65,11 @@ export default function RootNavigator() {
               name="UserProfile"
               component={UserProfileScreen}
               options={{ headerShown: true, headerTitle: "프로필" }}
+            />
+            <Stack.Screen
+              name="Notifications"
+              component={NotificationsScreen}
+              options={{ headerShown: true, headerTitle: "알림" }}
             />
           </>
         )}

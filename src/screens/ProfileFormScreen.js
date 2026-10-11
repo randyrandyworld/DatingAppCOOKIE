@@ -18,7 +18,6 @@ import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import cloudinaryConfig from "../cloudinaryConfig";
 import { COLORS, FONTS } from "../theme";
-import CookieBalance from "../components/CookieBalance";
 
 const GENDERS = ["남성", "여성", "기타"];
 const SEEKING = ["남성", "여성"];
@@ -42,6 +41,24 @@ const SMOKING_OPTIONS = [
   "연초",
   "비공개",
 ];
+const INTERESTS = [
+  "운동/헬스",
+  "러닝/등산",
+  "영화/드라마",
+  "음악",
+  "독서",
+  "요리/맛집",
+  "여행",
+  "게임",
+  "사진",
+  "반려동물",
+  "카페/디저트",
+  "와인/술",
+  "패션/뷰티",
+  "미술/전시",
+  "공연/페스티벌",
+  "캠핑/아웃도어",
+];
 
 export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const { user, profile, logout } = useAuth();
@@ -58,6 +75,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const [religion, setReligion] = useState(existing?.religion || "");
   const [drinking, setDrinking] = useState(existing?.drinking || "");
   const [smoking, setSmoking] = useState(existing?.smoking || "");
+  const [interests, setInterests] = useState(existing?.interests || []);
   const [photos, setPhotos] = useState(
     existing?.photos?.length
       ? [...existing.photos, ...Array(PHOTO_SLOTS - existing.photos.length).fill(null)]
@@ -94,6 +112,12 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       next[index] = null;
       return next;
     });
+  };
+
+  const toggleInterest = (tag) => {
+    setInterests((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
   };
 
   const uploadIfNeeded = async (uri, index) => {
@@ -162,12 +186,18 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     setError("");
     setOkMsg("");
     const ageNum = Number(age);
+    const heightNum = Number(height);
 
     if (!name.trim()) { setError("이름을 입력해주세요."); return; }
     if (!ageNum) { setError("나이를 입력해주세요."); return; }
     if (!gender) { setError("성별을 선택해주세요."); return; }
     if (!seekingGender) { setError("만나고 싶은 성별을 선택해주세요."); return; }
     if (ageNum < 18) { setError("만 18세 이상만 이용할 수 있어요."); return; }
+    if (!heightNum) { setError("키를 입력해주세요."); return; }
+    if (!region) { setError("활동 지역을 선택해주세요."); return; }
+    if (!religion) { setError("종교를 선택해주세요."); return; }
+    if (!drinking) { setError("음주 여부를 선택해주세요."); return; }
+    if (!smoking) { setError("흡연 여부를 선택해주세요."); return; }
     const chosenPhotos = photos.filter(Boolean);
     if (chosenPhotos.length === 0) { setError("사진을 최소 1장 등록해주세요."); return; }
 
@@ -187,13 +217,14 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           age: ageNum,
           gender,
           seekingGender,
-          ...(height ? { height: Number(height) } : {}),
+          height: heightNum,
           job: job.trim(),
           bio: bio.trim(),
-          ...(region ? { region } : {}),
-          ...(religion ? { religion } : {}),
-          ...(drinking ? { drinking } : {}),
-          ...(smoking ? { smoking } : {}),
+          region,
+          religion,
+          drinking,
+          smoking,
+          interests,
           photos: finalPhotos,
           ...(location ? { location } : {}),
           updatedAt: serverTimestamp(),
@@ -236,8 +267,6 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       <Text style={styles.subtitle}>
         사진 인증 없이 바로 시작할 수 있어요. 나를 잘 보여주는 사진과 소개를 채워보세요.
       </Text>
-
-      {mode === "edit" && <CookieBalance variant="card" />}
 
       <Text style={styles.label}>사진 (최소 1장)</Text>
       <View style={styles.photoRow}>
@@ -300,7 +329,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         ))}
       </View>
 
-      <Text style={styles.label}>키 (cm, 선택)</Text>
+      <Text style={styles.label}>키 (cm)</Text>
       <TextInput
         style={styles.input}
         value={height}
@@ -309,25 +338,43 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         keyboardType="number-pad"
       />
 
-      <Text style={styles.label}>직업 (선택, 자유롭게)</Text>
+      <Text style={styles.label}>직업</Text>
       <TextInput
         style={styles.input}
         value={job}
         onChangeText={setJob}
-        placeholder="예: 디자이너"
+        placeholder="예: 우주비행사 😄"
       />
 
-      <Text style={styles.label}>활동 지역 (선택)</Text>
+      <Text style={styles.label}>활동 지역</Text>
       <ChipGroup options={REGIONS} value={region} onChange={setRegion} />
 
-      <Text style={styles.label}>종교 (선택)</Text>
+      <Text style={styles.label}>종교</Text>
       <ChipGroup options={RELIGIONS} value={religion} onChange={setReligion} />
 
-      <Text style={styles.label}>음주 (선택)</Text>
+      <Text style={styles.label}>음주</Text>
       <ChipGroup options={DRINKING_OPTIONS} value={drinking} onChange={setDrinking} />
 
-      <Text style={styles.label}>흡연 (선택)</Text>
+      <Text style={styles.label}>흡연</Text>
       <ChipGroup options={SMOKING_OPTIONS} value={smoking} onChange={setSmoking} />
+
+      <Text style={styles.label}>취미/관심사</Text>
+      <View style={styles.chipWrap}>
+        {INTERESTS.map((tag) => {
+          const active = interests.includes(tag);
+          return (
+            <TouchableOpacity
+              key={tag}
+              style={[styles.optionChip, active && styles.optionChipActive]}
+              onPress={() => toggleInterest(tag)}
+            >
+              <Text style={[styles.optionChipText, active && styles.optionChipTextActive]}>
+                {tag}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
 
       <Text style={styles.label}>자기소개</Text>
       <TextInput

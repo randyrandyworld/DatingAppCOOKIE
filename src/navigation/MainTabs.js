@@ -4,12 +4,14 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import DiscoverScreen from "../screens/DiscoverScreen";
 import MatchesScreen from "../screens/MatchesScreen";
+import LikesYouScreen from "../screens/LikesYouScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
 import AdminScreen from "../screens/AdminScreen";
 import { isAdminUid } from "../adminConfig";
 import CookieMark from "../components/CookieMark";
 import { useAuth } from "../context/AuthContext";
 import { useUnreadMatchesCount } from "../utils/unread";
+import { useLikesYouCount } from "../utils/likesYou";
 import { COLORS, FONTS } from "../theme";
 
 const Tab = createBottomTabNavigator();
@@ -17,12 +19,13 @@ const Tab = createBottomTabNavigator();
 export default function MainTabs() {
   const { user, profile } = useAuth();
   const unreadCount = useUnreadMatchesCount(user?.uid);
+  const likesYouCount = useLikesYouCount(user?.uid);
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false, // 인스타처럼 텍스트 라벨 없이 아이콘만
+        tabBarShowLabel: false,
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.inactive,
         tabBarStyle: {
@@ -60,6 +63,40 @@ export default function MainTabs() {
                 color={focused ? COLORS.primary : COLORS.inactive}
               />
               {unreadCount > 0 && <View style={{ position: "absolute", top: -2, right: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: COLORS.primary, borderWidth: 1.5, borderColor: "#fff" }} />}
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="LikesYou"
+        component={LikesYouScreen}
+        options={{
+          headerShown: true,
+          headerTitle: "날 좋아요한 사람",
+          headerTitleStyle: { fontWeight: "800" },
+          headerStyle: { shadowOpacity: 0, elevation: 0 },
+          tabBarIcon: ({ focused, size }) => (
+            <View>
+              <Ionicons
+                name={focused ? "heart" : "heart-outline"}
+                size={size ?? 26}
+                color={focused ? COLORS.primary : COLORS.inactive}
+              />
+              {likesYouCount > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -2,
+                    right: -4,
+                    width: 9,
+                    height: 9,
+                    borderRadius: 5,
+                    backgroundColor: COLORS.primary,
+                    borderWidth: 1.5,
+                    borderColor: "#fff",
+                  }}
+                />
+              )}
             </View>
           ),
         }}

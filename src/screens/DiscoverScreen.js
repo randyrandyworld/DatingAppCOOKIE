@@ -34,6 +34,7 @@ import {
   sortWithBoost,
 } from "../utils/boost";
 import CookieLogo from "../components/CookieLogo";
+import CookieBalance from "../components/CookieBalance";
 import FadeOverlay from "../components/FadeOverlay";
 import CookieMark from "../components/CookieMark";
 import { Ionicons } from "@expo/vector-icons";
@@ -354,7 +355,7 @@ export default function DiscoverScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* 상단 바: 왼쪽 로고, 오른쪽에 알림 아이콘 + 거리 필터 알약 */}
       <View style={styles.filterHeader}>
-        <CookieLogo size={26} />
+        <CookieLogo size={22} />
         <View style={styles.headerRight}>
           <TouchableOpacity
             style={[styles.boostButton, boostActive && styles.boostButtonActive]}
@@ -366,6 +367,7 @@ export default function DiscoverScreen({ navigation }) {
               <Text style={styles.boostTime}>{boostMinutesLeft(boostUntil, nowTick)}분</Text>
             )}
           </TouchableOpacity>
+          <CookieBalance variant="pill" />
           <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => navigation.navigate("Notifications")}
@@ -668,7 +670,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
     paddingBottom: 8,
   },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   notificationButton: {
     width: 34,
     height: 34,
@@ -709,7 +711,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: COLORS.surface,
     borderRadius: 18,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 7,
   },
   filterPillText: { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.textLight },

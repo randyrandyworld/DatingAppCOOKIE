@@ -23,6 +23,8 @@ import { distanceKm } from "../utils/distance";
 import { isAdminUid } from "../adminConfig";
 import { getFreeSuperLikeStatus, markFreeSuperLikeUsed } from "../utils/superLike";
 import { spendOn, getCookieBalance, COOKIE_PRICES } from "../utils/cookies";
+import { useUnreadMatchesCount } from "../utils/unread";
+import { useLikesYouCount } from "../utils/likesYou";
 import CookieLogo from "../components/CookieLogo";
 import FadeOverlay from "../components/FadeOverlay";
 import CookieMark from "../components/CookieMark";
@@ -41,6 +43,10 @@ export default function DiscoverScreen({ navigation }) {
   const [filterOpen, setFilterOpen] = useState(false); // 거리 슬라이더를 눌렀을 때만 펼쳐지도록
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+
+  const unreadMatches = useUnreadMatchesCount(user?.uid);
+  const likesYouCount = useLikesYouCount(user?.uid);
+  const hasNotification = unreadMatches + likesYouCount > 0;
 
   // 매칭 연출용 상태
   const [matchInfo, setMatchInfo] = useState(null); // { matchId, otherUser } or null
@@ -249,16 +255,25 @@ export default function DiscoverScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* 거리 필터 — 평소엔 작은 알약 버튼 하나만, 누르면 슬라이더가 펼쳐짐 (화면 위쪽을 너무 차지하지 않도록) */}
+      {/* 상단 바: 왼쪽 로고, 오른쪽에 알림 아이콘 + 거리 필터 알약 */}
       <View style={styles.filterHeader}>
         <CookieLogo size={26} />
-        <TouchableOpacity
-          style={styles.filterPill}
-          onPress={() => setFilterOpen((v) => !v)}
-        >
-          <Ionicons name="options-outline" size={15} color={COLORS.textLight} />
-          <Text style={styles.filterPillText}>{maxDist}km</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => navigation.navigate("Matches")}
+          >
+            <Ionicons name="notifications-outline" size={18} color="#fff" />
+            {hasNotification && <View style={styles.notificationDot} />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.filterPill}
+            onPress={() => setFilterOpen((v) => !v)}
+          >
+            <Ionicons name="options-outline" size={15} color={COLORS.textLight} />
+            <Text style={styles.filterPillText}>{maxDist}km</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       {filterOpen && (
         <View style={styles.filterBar}>
@@ -545,6 +560,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 6,
     paddingBottom: 8,
+  },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  notificationButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notificationDot: {
+    position: "absolute",
+    top: 4,
+    right: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#fff",
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
   },
   filterPill: {
     flexDirection: "row",

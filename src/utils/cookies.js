@@ -8,6 +8,7 @@ export const COOKIE_PRICES = {
   boost: 10,
   seeWhoLikedMe: 3,
   rewind: 2,
+  extraLike: 3, // 하루 무료 좋아요 다 쓴 뒤, 쿠키로 좋아요 추가 구매
 };
 
 export async function getCookieBalance(uid) {

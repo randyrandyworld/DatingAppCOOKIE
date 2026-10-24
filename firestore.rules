@@ -102,7 +102,9 @@ service cloud.firestore {
         && request.auth.uid in request.resource.data.reportedBy
         && request.resource.data.reportedBy.size() == resource.data.get('reportedBy', []).size() + 1;
 
-      // 계정 삭제는 서버 기능이 생기기 전까지 관리자만 (삭제 후 재가입으로 가입 보너스를 반복해서 받는 것 방지)
+      // 회원 탈퇴: 본인 프로필 문서 삭제 가능 (관리자는 위 write 규칙으로 가능)
+      // ※ 다른 컬렉션(매칭·채팅·스와이프)에 남는 흔적까지 지우려면 서버(Cloud Functions)가 필요
+      allow delete: if signedIn() && request.auth.uid == userId;
     }
 
     // ───────── 스와이프 기록 ─────────

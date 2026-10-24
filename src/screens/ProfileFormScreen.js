@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../context/AuthContext";
+import { SIGNUP_BONUS_COOKIES } from "../utils/cookies";
 import cloudinaryConfig from "../cloudinaryConfig";
 import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
@@ -322,7 +323,10 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           photos: finalPhotos,
           ...(location ? { location } : {}),
           updatedAt: serverTimestamp(),
-          ...(mode === "setup" ? { createdAt: serverTimestamp() } : {}),
+          // Firestore 규칙상 최초 가입 문서는 cookies가 정확히 30이어야 저장이 허용됨
+          ...(mode === "setup"
+            ? { createdAt: serverTimestamp(), cookies: SIGNUP_BONUS_COOKIES }
+            : {}),
         },
         { merge: true }
       );

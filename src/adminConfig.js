@@ -3,6 +3,7 @@
 // UID 찾는 법: Firebase 콘솔 → Authentication → Users 표의 "User UID" 열을 복사.
 // ⚠️ Firestore 보안 규칙(claude/status.md의 "관리자 모드용 규칙")에도 똑같은 UID가 들어가야
 //    더미 유저 기능이 동작해요. 관리자를 추가/삭제할 땐 이 파일과 규칙 두 군데를 같이 바꿔주세요.
+// ⚠️ firestore.rules 의 isAdmin() 목록과 항상 같아야 해요
 export const ADMIN_UIDS = [
   "0oQnnfN9OlMtHhkotmctVkeRAMr2", // 승일
   "J616YkESF8PQRowNvxTwENgtPio2", // 친구

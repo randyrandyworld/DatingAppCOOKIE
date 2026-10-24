@@ -1,6 +1,7 @@
 import * as Location from "expo-location";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import { blurLocation } from "./privacyLocation";
 
 // 프로필 편집 화면과 별개로, 로그인할 때마다(또는 필요할 때) 위치를 조용히 최신화한다.
 // - 이미 위치 권한을 허용한 사용자에게만 동작 (권한 팝업을 다시 띄우지 않음 — 매번 물어보면 성가심)
@@ -18,7 +19,7 @@ export async function refreshLocationIfPermitted(uid) {
     if (!pos) return false;
 
     await updateDoc(doc(db, "users", uid), {
-      location: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+      location: blurLocation(pos.coords.latitude, pos.coords.longitude),
     });
     return true;
   } catch (e) {

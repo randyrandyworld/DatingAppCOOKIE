@@ -23,6 +23,8 @@ import { SIGNUP_BONUS_COOKIES } from "../utils/cookies";
 import cloudinaryConfig from "../cloudinaryConfig";
 import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
+import { SIGNUP_BONUS_COOKIES } from "../utils/cookies";
+import { blurLocation } from "../utils/privacyLocation";
 import CookieBalance from "../components/CookieBalance";
 import { showActionSheet } from "../components/ActionSheetHost";
 import { ensureReferralCode } from "../utils/referral";
@@ -265,7 +267,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         new Promise((resolve) => setTimeout(() => resolve(null), 6000)),
       ]);
       if (!pos) return null;
-      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      return blurLocation(pos.coords.latitude, pos.coords.longitude);
     } catch (e) {
       return null;
     }
@@ -323,10 +325,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           photos: finalPhotos,
           ...(location ? { location } : {}),
           updatedAt: serverTimestamp(),
-          // Firestore 규칙상 최초 가입 문서는 cookies가 정확히 30이어야 저장이 허용됨
-          ...(mode === "setup"
-            ? { createdAt: serverTimestamp(), cookies: SIGNUP_BONUS_COOKIES }
-            : {}),
+          ...(mode === "setup" ? { createdAt: serverTimestamp() } : {}),
         },
         { merge: true }
       );

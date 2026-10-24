@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
   Modal,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +24,7 @@ import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
 import CookieBalance from "../components/CookieBalance";
 import { showActionSheet } from "../components/ActionSheetHost";
+import { ensureReferralCode } from "../utils/referral";
 
 const GENDERS = ["남성", "여성"];
 const SEEKING = ["남성", "여성"];
@@ -107,6 +109,22 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [okMsg, setOkMsg] = useState("");
+
+  // 추천코드가 없는 기존 유저(이 기능 생기기 전에 가입한 사람)는 프로필 화면 들어오면 하나 만들어줌
+  useEffect(() => {
+    if (mode !== "edit" || !user?.uid) return;
+    if (existing && !existing.referralCode) {
+      ensureReferralCode(user.uid).catch(() => {});
+    }
+  }, [mode, user?.uid, existing?.referralCode]);
+
+  const myReferralCode = existing?.referralCode || "";
+  const onShareReferral = () => {
+    if (!myReferralCode) return;
+    Share.share({
+      message: `쿠키 데이팅 앱 추천코드: ${myReferralCode}\n이 코드로 가입하면 둘 다 쿠키 30개씩 받아요! 🍪`,
+    }).catch(() => {});
+  };
 
   // 회원 탈퇴 — 비밀번호 재확인 모달
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -353,6 +371,23 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       </Text>
 
       {mode === "edit" && <CookieBalance variant="card" />}
+
+      {mode === "edit" && !!myReferralCode && (
+        <View style={styles.referralCard}>
+          <Text style={styles.referralLabel}>내 추천 코드</Text>
+          <View style={styles.referralCodeRow}>
+            <Text style={styles.referralCode} selectable>
+              {myReferralCode}
+            </Text>
+            <TouchableOpacity style={styles.referralShareButton} onPress={onShareReferral}>
+              <Text style={styles.referralShareButtonText}>공유하기</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.referralHint}>
+            친구가 이 코드로 가입하면 둘 다 쿠키 30개씩 받아요
+          </Text>
+        </View>
+      )}
 
       <Text style={styles.label}>사진 (최소 1장)</Text>
       <View style={styles.photoRow}>
@@ -700,4 +735,34 @@ const styles = StyleSheet.create({
   deleteConfirmButtonText: { color: "#fff", fontSize: 15, fontWeight: "700" },
   modalCancelButton: { alignItems: "center", marginTop: 14 },
   modalCancelButtonText: { color: COLORS.textLight, fontSize: 14 },
+  referralCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  referralLabel: { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.textLight },
+  referralCodeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 6,
+  },
+  referralCode: {
+    fontSize: 24,
+    fontFamily: FONTS.heading,
+    color: COLORS.text,
+    letterSpacing: 2,
+  },
+  referralShareButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  referralShareButtonText: { color: "#fff", fontSize: 13, fontFamily: FONTS.bold },
+  referralHint: { fontSize: 12, color: COLORS.textLight, marginTop: 8 },
 });

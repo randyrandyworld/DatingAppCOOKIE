@@ -13,6 +13,7 @@ import { friendlyError } from "./LoginScreen";
 import { COLORS, FONTS } from "../theme";
 import CookieLogo from "../components/CookieLogo";
 import { LinearGradient } from "expo-linear-gradient";
+import { applyReferralCode, ensureReferralCode } from "../utils/referral";
 
 const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
@@ -21,6 +22,7 @@ export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [error, setError] = useState(""); // ← 화면에 띄울 에러 문구
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,7 +46,17 @@ export default function SignupScreen({ navigation }) {
     }
     setSubmitting(true);
     try {
-      await signup(email, password);
+      const cred = await signup(email, password);
+      const uid = cred.user.uid;
+      // 내 추천코드 생성 + (입력했으면) 추천코드 적용은 가입 자체를 막으면 안 되니 별도로 처리
+      try {
+        await ensureReferralCode(uid);
+        if (referralCode.trim()) {
+          await applyReferralCode(uid, referralCode);
+        }
+      } catch (e) {
+        // 추천코드 처리가 실패해도 회원가입 자체는 이미 성공한 상태라 그냥 넘어감
+      }
     } catch (e) {
       setError(friendlyError(e)); // "이미 사용 중인 이메일이에요." 등
     } finally {
@@ -86,6 +98,15 @@ export default function SignupScreen({ navigation }) {
         value={confirm}
         onChangeText={setConfirm}
       />
+      <TextInput
+        style={styles.input}
+        placeholder="추천 코드 (선택)"
+        placeholderTextColor={COLORS.textLight}
+        autoCapitalize="characters"
+        value={referralCode}
+        onChangeText={(v) => setReferralCode(v.toUpperCase())}
+      />
+      <Text style={styles.referralHint}>추천 코드로 가입하면 나와 추천인 모두 쿠키 30개씩 받아요 🍪</Text>
 
       {/* ▼ 에러 있을 때만 빨간 글씨로 표시 ▼ */}
       {!!error && <Text style={styles.error}>{error}</Text>}
@@ -125,6 +146,13 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.heading,
   },
   subtitle: { textAlign: "center", color: "rgba(255,255,255,0.92)", fontFamily: FONTS.bold, marginBottom: 32 },
+  referralHint: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 12,
+    marginTop: -4,
+    marginBottom: 12,
+    textAlign: "center",
+  },
   input: {
     borderWidth: 0,
     borderRadius: 28,

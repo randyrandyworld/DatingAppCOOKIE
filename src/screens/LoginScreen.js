@@ -75,6 +75,10 @@ export default function LoginScreen({ navigation }) {
         )}
       </TouchableOpacity>
 
+      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+        <Text style={styles.linkSmall}>비밀번호를 잊으셨나요?</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
         <Text style={styles.link}>계정이 없으신가요? 회원가입</Text>
       </TouchableOpacity>
@@ -134,4 +138,11 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: COLORS.accent, fontSize: 17, fontFamily: FONTS.heading },
   link: { color: "#fff", fontFamily: FONTS.bold, textAlign: "center", marginTop: 20 },
+  linkSmall: {
+    color: "rgba(255,255,255,0.85)",
+    fontFamily: FONTS.bold,
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: 18,
+  },
 });

@@ -6,6 +6,7 @@ import * as Notifications from "expo-notifications";
 import { useAuth } from "../context/AuthContext";
 import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
+import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import ProfileFormScreen from "../screens/ProfileFormScreen";
 import ChatScreen from "../screens/ChatScreen";
 import UserProfileScreen from "../screens/UserProfileScreen";
@@ -48,6 +49,7 @@ export default function RootNavigator() {
           <>
             <Stack.Screen name="Login" component={LoginScreen} />
             <Stack.Screen name="Signup" component={SignupScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           </>
         ) : !hasProfile ? (
           <Stack.Screen name="ProfileSetup">

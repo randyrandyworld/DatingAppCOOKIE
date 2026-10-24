@@ -1,11 +1,15 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   createUserWithEmailAndPassword,
+  deleteUser,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
+import { deleteDoc, doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import {
   registerForPushNotificationsAsync,
@@ -82,6 +86,29 @@ export function AuthProvider({ children }) {
 
   const logout = () => signOut(auth);
 
+  // 비밀번호 찾기 — 가입한 이메일로 "비밀번호 재설정" 메일을 보낸다 (Firebase 기본 제공, 별도 서버 불필요)
+  const resetPassword = (email) => sendPasswordResetEmail(auth, email.trim());
+
+  // 회원 탈퇴 — 보안상 비밀번호로 재인증한 뒤에만 삭제를 진행한다.
+  // 내 프로필(users/{uid}) 문서를 지우고 Firebase Auth 계정 자체를 삭제한다.
+  // (주의: 매칭/채팅/좋아요 등 다른 컬렉션에 남아있는 흔적까지 전부 지우는 건
+  //  서버(Cloud Functions) 없이는 한계가 있어 최소한으로 처리함)
+  const deleteAccount = async (password) => {
+    const current = auth.currentUser;
+    if (!current) throw new Error("로그인 정보가 없어요.");
+
+    const credential = EmailAuthProvider.credential(current.email, password);
+    await reauthenticateWithCredential(current, credential);
+
+    try {
+      await deleteDoc(doc(db, "users", current.uid));
+    } catch (e) {
+      // 프로필 삭제가 실패해도 계정 삭제는 계속 진행
+    }
+
+    await deleteUser(current);
+  };
+
   const value = {
     user,
     profile,
@@ -90,6 +117,8 @@ export function AuthProvider({ children }) {
     signup,
     login,
     logout,
+    resetPassword,
+    deleteAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

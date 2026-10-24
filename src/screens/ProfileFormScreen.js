@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -21,6 +22,7 @@ import cloudinaryConfig from "../cloudinaryConfig";
 import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
 import CookieBalance from "../components/CookieBalance";
+import { showActionSheet } from "../components/ActionSheetHost";
 
 const GENDERS = ["남성", "여성"];
 const SEEKING = ["남성", "여성"];
@@ -73,7 +75,7 @@ function isValidDate(y, m, d) {
 }
 
 export default function ProfileFormScreen({ mode = "setup", navigation }) {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, deleteAccount } = useAuth();
   const existing = mode === "edit" ? profile : null;
   const birthLocked = !!existing?.birthDate;
   const heightLocked = !!existing?.height;
@@ -105,6 +107,53 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [okMsg, setOkMsg] = useState("");
+
+  // 회원 탈퇴 — 비밀번호 재확인 모달
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const openDeleteConfirm = () => {
+    showActionSheet({
+      title: "정말 탈퇴하시겠어요?",
+      message: "내 프로필이 삭제되고 되돌릴 수 없어요.",
+      buttons: [
+        {
+          text: "탈퇴하기",
+          style: "destructive",
+          onPress: () => {
+            setDeleteError("");
+            setDeletePassword("");
+            setDeleteModalOpen(true);
+          },
+        },
+        { text: "취소", style: "cancel" },
+      ],
+    });
+  };
+
+  const onConfirmDelete = async () => {
+    if (!deletePassword) {
+      setDeleteError("비밀번호를 입력해주세요.");
+      return;
+    }
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteAccount(deletePassword);
+      // 성공하면 로그인 상태가 바뀌면서 자동으로 로그인 화면으로 이동함
+    } catch (e) {
+      const code = e?.code || "";
+      setDeleteError(
+        code.includes("wrong-password") || code.includes("invalid-credential")
+          ? "비밀번호가 올바르지 않아요."
+          : e?.message || "탈퇴에 실패했어요. 다시 시도해주세요."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const pickPhoto = async (index) => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -294,6 +343,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
       : null;
 
   return (
+    <>
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>
         {mode === "setup" ? "프로필을 만들어주세요" : "내 프로필"}
@@ -487,7 +537,59 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           <Text style={styles.logoutButtonText}>로그아웃</Text>
         </TouchableOpacity>
       )}
+
+      {mode === "edit" && (
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={openDeleteConfirm}>
+          <Text style={styles.deleteAccountButtonText}>회원 탈퇴</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
+
+    <Modal
+      visible={deleteModalOpen}
+      transparent
+      animationType="fade"
+      onRequestClose={() => !deleting && setDeleteModalOpen(false)}
+    >
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>비밀번호 확인</Text>
+          <Text style={styles.modalDesc}>
+            탈퇴를 진행하려면 현재 비밀번호를 입력해주세요.
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={deletePassword}
+            onChangeText={setDeletePassword}
+            placeholder="비밀번호"
+            placeholderTextColor={COLORS.textLight}
+            secureTextEntry
+            autoFocus
+          />
+          {!!deleteError && <Text style={styles.error}>{deleteError}</Text>}
+
+          <TouchableOpacity
+            style={styles.deleteConfirmButton}
+            onPress={onConfirmDelete}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.deleteConfirmButtonText}>탈퇴하기</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.modalCancelButton}
+            onPress={() => setDeleteModalOpen(false)}
+            disabled={deleting}
+          >
+            <Text style={styles.modalCancelButtonText}>취소</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -571,4 +673,31 @@ const styles = StyleSheet.create({
   saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   logoutButton: { alignItems: "center", marginTop: 20 },
   logoutButtonText: { color: COLORS.textLight },
+  deleteAccountButton: { alignItems: "center", marginTop: 14 },
+  deleteAccountButtonText: { color: COLORS.danger, fontSize: 13 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(20,10,5,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 28,
+  },
+  modalCard: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+  },
+  modalTitle: { fontSize: 18, fontFamily: FONTS.heading, color: COLORS.text, marginBottom: 8 },
+  modalDesc: { fontSize: 13, color: COLORS.textLight, lineHeight: 19, marginBottom: 16 },
+  deleteConfirmButton: {
+    backgroundColor: COLORS.danger,
+    borderRadius: 14,
+    paddingVertical: 15,
+    alignItems: "center",
+    marginTop: 16,
+  },
+  deleteConfirmButtonText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  modalCancelButton: { alignItems: "center", marginTop: 14 },
+  modalCancelButtonText: { color: COLORS.textLight, fontSize: 14 },
 });

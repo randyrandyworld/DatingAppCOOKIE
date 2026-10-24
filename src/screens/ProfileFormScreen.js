@@ -23,7 +23,6 @@ import { SIGNUP_BONUS_COOKIES } from "../utils/cookies";
 import cloudinaryConfig from "../cloudinaryConfig";
 import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
-import { SIGNUP_BONUS_COOKIES } from "../utils/cookies";
 import { blurLocation } from "../utils/privacyLocation";
 import CookieBalance from "../components/CookieBalance";
 import { showActionSheet } from "../components/ActionSheetHost";
@@ -325,7 +324,10 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           photos: finalPhotos,
           ...(location ? { location } : {}),
           updatedAt: serverTimestamp(),
-          ...(mode === "setup" ? { createdAt: serverTimestamp() } : {}),
+          // Firestore 규칙상 최초 가입 문서는 cookies가 정확히 30이어야 저장이 허용됨
+          ...(mode === "setup"
+            ? { createdAt: serverTimestamp(), cookies: SIGNUP_BONUS_COOKIES }
+            : {}),
         },
         { merge: true }
       );

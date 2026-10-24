@@ -26,8 +26,8 @@ export default function CookieMark({ size = 32, variant = "color", style }) {
         <Circle cx="24" cy="24" r="21" fill={fill} />
       </G>
       <G fill={chip}>
-        <Ellipse cx="17" cy="19" rx="3.4" ry="2.8" rotation="-20" origin="17, 19" />
-        <Ellipse cx="29" cy="30" rx="3.6" ry="2.8" rotation="25" origin="29, 30" />
+        <Ellipse cx="17" cy="19" rx="3.4" ry="2.8" transform="rotate(-20 17 19)" />
+        <Ellipse cx="29" cy="30" rx="3.6" ry="2.8" transform="rotate(25 29 30)" />
         <Ellipse cx="14" cy="32" rx="2.8" ry="2.3" />
         <Ellipse cx="28" cy="15" rx="2.4" ry="2" />
         <Ellipse cx="36" cy="26" rx="2.3" ry="2" />

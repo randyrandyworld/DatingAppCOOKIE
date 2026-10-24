@@ -1,4 +1,4 @@
-import { doc, getDoc, increment, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, increment, runTransaction, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 export const SIGNUP_BONUS_COOKIES = 30;
@@ -23,12 +23,23 @@ export async function addCookies(uid, amount) {
   await setDoc(doc(db, "users", uid), { cookies: increment(amount) }, { merge: true });
 }
 
+// 쿠키 차감 (트랜잭션: 잔액 확인과 차감이 한 번에 처리되어 연타해도 마이너스가 되지 않음)
+// Firestore 규칙상 쿠키는 "줄이는 것"만 클라이언트에서 가능해요.
 export async function spendCookies(uid, amount) {
   if (!uid || !amount) return false;
-  const balance = await getCookieBalance(uid);
-  if (balance < amount) return false;
-  await updateDoc(doc(db, "users", uid), { cookies: increment(-amount) });
-  return true;
+  try {
+    return await runTransaction(db, async (tx) => {
+      const ref = doc(db, "users", uid);
+      const snap = await tx.get(ref);
+      const balance = snap.exists() ? snap.data().cookies ?? 0 : 0;
+      if (balance < amount) return false;
+      tx.update(ref, { cookies: balance - amount });
+      return true;
+    });
+  } catch (e) {
+    console.log("쿠키 차감 실패:", e?.message);
+    return false;
+  }
 }
 
 export async function spendOn(uid, featureKey) {

@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
+  Alert,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -99,16 +100,23 @@ export default function ChatScreen({ route, navigation }) {
     const trimmed = text.trim();
     if (!trimmed || closed) return;
     setText("");
-    await addDoc(collection(db, "matches", matchId, "messages"), {
-      senderId: user.uid,
-      text: trimmed,
-      createdAt: serverTimestamp(),
-    });
-    await updateDoc(doc(db, "matches", matchId), {
-      lastMessage: trimmed,
-      lastMessageAt: serverTimestamp(),
-      lastSenderId: user.uid,
-    });
+    try {
+      await addDoc(collection(db, "matches", matchId, "messages"), {
+        senderId: user.uid,
+        text: trimmed,
+        createdAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, "matches", matchId), {
+        lastMessage: trimmed,
+        lastMessageAt: serverTimestamp(),
+        lastSenderId: user.uid,
+      });
+    } catch (e) {
+      // 전송 실패(네트워크 문제, 이미 종료된 대화 등): 입력했던 글을 되돌려주고 알림
+      setText(trimmed);
+      Alert.alert("전송 실패", "메시지를 보내지 못했어요. 잠시 후 다시 시도해주세요.");
+      return;
+    }
 
     if (otherUser?.id) {
       sendPushNotificationToUser(otherUser.id, {
@@ -160,6 +168,7 @@ export default function ChatScreen({ route, navigation }) {
           onChangeText={setText}
           placeholder="메시지를 입력하세요"
           multiline
+          maxLength={1000}
         />
         <TouchableOpacity style={styles.sendButton} onPress={send}>
           <Text style={styles.sendButtonText}>전송</Text>

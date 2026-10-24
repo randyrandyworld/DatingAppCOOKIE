@@ -21,6 +21,8 @@ import { useAuth } from "../context/AuthContext";
 import cloudinaryConfig from "../cloudinaryConfig";
 import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
+import { SIGNUP_BONUS_COOKIES } from "../utils/cookies";
+import { blurLocation } from "../utils/privacyLocation";
 import CookieBalance from "../components/CookieBalance";
 import { showActionSheet } from "../components/ActionSheetHost";
 
@@ -246,7 +248,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
         new Promise((resolve) => setTimeout(() => resolve(null), 6000)),
       ]);
       if (!pos) return null;
-      return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      return blurLocation(pos.coords.latitude, pos.coords.longitude);
     } catch (e) {
       return null;
     }
@@ -304,7 +306,9 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           photos: finalPhotos,
           ...(location ? { location } : {}),
           updatedAt: serverTimestamp(),
-          ...(mode === "setup" ? { createdAt: serverTimestamp() } : {}),
+          ...(mode === "setup"
+            ? { createdAt: serverTimestamp(), cookies: SIGNUP_BONUS_COOKIES }
+            : {}),
         },
         { merge: true }
       );

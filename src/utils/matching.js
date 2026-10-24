@@ -31,18 +31,33 @@ export async function recordSwipeAndCheckMatch(myUid, targetUid, liked, myName, 
 
   if (theirSwipeSnap.exists() && theirSwipeSnap.data().liked) {
     const matchId = getMatchId(myUid, targetUid);
-    await setDoc(doc(db, "matches", matchId), {
-      users: [myUid, targetUid],
-      createdAt: serverTimestamp(),
-      lastMessage: "",
-      lastMessageAt: serverTimestamp(),
-    });
+    const matchRef = doc(db, "matches", matchId);
 
-    sendPushNotificationToUser(targetUid, {
-      title: isSuper ? "⭐ 슈퍼라이크 매칭이 생겼어요!" : "새로운 매칭이 생겼어요 🎉",
-      body: myName ? `${myName}님과 매칭됐어요!` : "누군가와 매칭됐어요!",
-      data: { type: "match", matchId, otherUser: { id: myUid, name: myName || "" } },
-    });
+    // 서로 동시에 좋아요를 누르면 상대가 먼저 매치를 만들었을 수 있음 → 이미 있으면 덮어쓰지 않고 그대로 사용
+    let created = false;
+    const existing = await getDoc(matchRef);
+    if (!existing.exists()) {
+      try {
+        await setDoc(matchRef, {
+          users: [myUid, targetUid],
+          createdAt: serverTimestamp(),
+          lastMessage: "",
+          lastMessageAt: serverTimestamp(),
+        });
+        created = true;
+      } catch (e) {
+        const again = await getDoc(matchRef);
+        if (!again.exists()) throw e;
+      }
+    }
+
+    if (created) {
+      sendPushNotificationToUser(targetUid, {
+        title: isSuper ? "⭐ 슈퍼라이크 매칭이 생겼어요!" : "새로운 매칭이 생겼어요 🎉",
+        body: myName ? `${myName}님과 매칭됐어요!` : "누군가와 매칭됐어요!",
+        data: { type: "match", matchId, otherUser: { id: myUid, name: myName || "" } },
+      });
+    }
 
     return matchId;
   }

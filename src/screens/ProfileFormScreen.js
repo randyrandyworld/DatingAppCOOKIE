@@ -24,6 +24,8 @@ import cloudinaryConfig from "../cloudinaryConfig";
 import { calcKoreanAge } from "../utils/matching";
 import { COLORS, FONTS } from "../theme";
 import { blurLocation } from "../utils/privacyLocation";
+import { MIN_AGE, CONSENT_VERSION } from "../legal/legalConfig";
+import { loadPendingConsent, clearPendingConsent } from "../utils/consent";
 import CookieBalance from "../components/CookieBalance";
 import { showActionSheet } from "../components/ActionSheetHost";
 import { ensureReferralCode } from "../utils/referral";
@@ -287,7 +289,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     const ageNum = calcKoreanAge(birthDate);
     if (!gender) { setError("성별을 선택해주세요."); return; }
     if (!seekingGender) { setError("만나고 싶은 성별을 선택해주세요."); return; }
-    if (ageNum < 18) { setError("만 18세 이상만 이용할 수 있어요."); return; }
+    if (ageNum < MIN_AGE) { setError(`만 ${MIN_AGE}세 이상만 이용할 수 있어요.`); return; }
     if (!heightNum) { setError("키를 입력해주세요."); return; }
     if (!region) { setError("활동 지역을 선택해주세요."); return; }
     if (!religion) { setError("종교를 선택해주세요."); return; }
@@ -299,6 +301,7 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
     setSaving(true);
     try {
       const location = await getMyLocation();
+      const pendingConsent = mode === "setup" ? await loadPendingConsent(user.uid) : null;
 
       const uploadedUrls = await Promise.all(
         photos.map((uri, idx) => uploadIfNeeded(uri, idx))
@@ -326,12 +329,18 @@ export default function ProfileFormScreen({ mode = "setup", navigation }) {
           updatedAt: serverTimestamp(),
           // Firestore 규칙상 최초 가입 문서는 cookies가 정확히 30이어야 저장이 허용됨
           ...(mode === "setup"
-            ? { createdAt: serverTimestamp(), cookies: SIGNUP_BONUS_COOKIES }
+            ? {
+                createdAt: serverTimestamp(),
+                cookies: SIGNUP_BONUS_COOKIES,
+                // 가입 화면에서 받은 약관·연령 동의 기록 (없으면 현재 버전 기준으로 연령만 기록)
+                consents: pendingConsent || { age: true, version: CONSENT_VERSION, agreedAt: new Date().toISOString() },
+              }
             : {}),
         },
         { merge: true }
       );
 
+      if (mode === "setup") clearPendingConsent(user.uid);
       if (mode === "edit") {
         setOkMsg("프로필이 저장됐어요.");
       }

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +15,8 @@ import { COLORS, FONTS } from "../theme";
 import CookieLogo from "../components/CookieLogo";
 import { LinearGradient } from "expo-linear-gradient";
 import { applyReferralCode, ensureReferralCode } from "../utils/referral";
+import ConsentChecklist, { EMPTY_CONSENT, allRequiredChecked } from "../components/ConsentChecklist";
+import { savePendingConsent } from "../utils/consent";
 
 const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
@@ -23,6 +26,7 @@ export default function SignupScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [referralCode, setReferralCode] = useState("");
+  const [consent, setConsent] = useState(EMPTY_CONSENT);
   const [error, setError] = useState(""); // ← 화면에 띄울 에러 문구
   const [submitting, setSubmitting] = useState(false);
 
@@ -44,10 +48,16 @@ export default function SignupScreen({ navigation }) {
       setError("비밀번호가 일치하지 않아요.");
       return;
     }
+    if (!allRequiredChecked(consent)) {
+      setError("필수 약관에 모두 동의해주세요.");
+      return;
+    }
     setSubmitting(true);
     try {
       const cred = await signup(email, password);
       const uid = cred.user.uid;
+      // 동의 내용(버전·시각 포함)은 프로필 문서가 만들어질 때 함께 저장됨
+      await savePendingConsent(uid, consent);
       // 내 추천코드 생성 + (입력했으면) 추천코드 적용은 가입 자체를 막으면 안 되니 별도로 처리
       try {
         await ensureReferralCode(uid);
@@ -70,6 +80,11 @@ export default function SignupScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <CookieLogo size={46} onColor style={styles.logoRow} />
       <Text style={styles.subtitle}>새 계정 만들기</Text>
 
@@ -108,6 +123,8 @@ export default function SignupScreen({ navigation }) {
       />
       <Text style={styles.referralHint}>추천 코드로 가입하면 나와 추천인 모두 쿠키 30개씩 받아요 🍪</Text>
 
+      <ConsentChecklist value={consent} onChange={setConsent} />
+
       {/* ▼ 에러 있을 때만 빨간 글씨로 표시 ▼ */}
       {!!error && <Text style={styles.error}>{error}</Text>}
 
@@ -126,16 +143,19 @@ export default function SignupScreen({ navigation }) {
       <TouchableOpacity onPress={() => navigation.navigate("Login")}>
         <Text style={styles.link}>이미 계정이 있으신가요? 로그인</Text>
       </TouchableOpacity>
+      </ScrollView>
     </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 28,
+    paddingVertical: 48,
   },
   logoRow: { alignSelf: "center", marginBottom: 6 },
   logo: {

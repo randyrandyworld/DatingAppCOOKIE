@@ -60,6 +60,12 @@
         "projectId": "a334b386-e689-426e-bd16-df5f144175e8"
       }
     },
-    "owner": "randykims-team"
+    "owner": "randykims-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a334b386-e689-426e-bd16-df5f144175e8"
+    }
   }
 }

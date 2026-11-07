@@ -11,10 +11,12 @@
       },
       "ios": {
         "simulator": false
-      }
+      },
+      "channel": "preview"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "production"
     }
   },
   "submit": {
